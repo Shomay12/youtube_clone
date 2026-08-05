@@ -1,0 +1,52 @@
+.subtitles-page {
+  padding-bottom: 40px;
+}
+
+.sub-icon {
+  font-size: 28px;
+  color: var(--accent-blue);
+  margin-right: 12px;
+}
+
+.lang-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 280px;
+}
+
+.lang-chip {
+  background-color: var(--hover-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.status-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.status-tag.success {
+  background-color: rgba(43, 166, 64, 0.15);
+  color: #2ba640;
+}
+
+.edit-sub-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #3f3f3f;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.edit-sub-btn:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-blue);
+}

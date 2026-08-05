@@ -1,0 +1,266 @@
+.video-details-page {
+  padding-bottom: 40px;
+}
+
+.video-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-btn {
+  color: var(--text-secondary);
+  border-radius: 50%;
+  padding: 8px;
+  display: flex;
+}
+
+.back-btn:hover {
+  background-color: var(--hover-bg);
+  color: #fff;
+}
+
+.video-header-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.undo-btn {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.undo-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.save-btn {
+  background-color: var(--accent-blue);
+  color: #000;
+  padding: 8px 18px;
+  border-radius: 2px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.save-btn:disabled {
+  background-color: #3f3f3f;
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.video-details-content {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.details-form-column {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row-2 {
+  display: flex;
+  gap: 20px;
+}
+
+.form-row-2 .form-group {
+  flex: 1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.form-input, .form-textarea, .form-select {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+}
+
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--accent-blue);
+}
+
+.radio-group-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--bg-card);
+  padding: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.video-preview-column {
+  flex: 1;
+}
+
+.video-player-mock {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.video-player-mock img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.play-button-mock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0,0,0,0.7);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-button-mock span {
+  color: white;
+  font-size: 32px;
+}
+
+.video-info-box {
+  background-color: var(--bg-card);
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.info-link {
+  color: var(--accent-blue);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.info-text {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.tab-panel {
+  padding: 24px;
+  background-color: var(--bg-card);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  margin-top: 24px;
+}
+
+.metric-row-inline {
+  display: flex;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.m-val {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--accent-blue);
+}
+
+.video-comment-row {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.c-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.c-author {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.c-text {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.claim-card-item {
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 1px solid #ff9800;
+  padding: 16px;
+  border-radius: 4px;
+  margin-top: 16px;
+}
+
+.claim-title {
+  color: #ff9800;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.no-claims-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #2ba640;
+  margin-top: 16px;
+}
+
+.check-ic {
+  font-size: 24px;
+}

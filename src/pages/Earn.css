@@ -1,0 +1,153 @@
+.earn-page {
+  padding-bottom: 40px;
+}
+
+.earn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.ypp-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(43, 166, 64, 0.15);
+  color: #2ba640;
+  border: 1px solid #2ba640;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.check-badge-icon {
+  font-size: 18px;
+}
+
+.earn-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 32px;
+  margin-bottom: 32px;
+}
+
+.hero-left h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.hero-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.hero-stats-row {
+  display: flex;
+  gap: 48px;
+}
+
+.h-stat {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+
+.h-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.rev-est-box {
+  background-color: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-color);
+  padding: 24px 32px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.rev-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rev-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2ba640;
+}
+
+.section-subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.earn-streams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.earn-stream-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.stream-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stream-icon {
+  font-size: 24px;
+  color: var(--accent-blue);
+}
+
+.stream-header h4 {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.stream-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.stream-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.toggle-btn {
+  background-color: #3f3f3f;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.toggle-btn.active {
+  background-color: var(--accent-blue);
+  color: #000;
+}

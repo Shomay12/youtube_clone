@@ -1,0 +1,63 @@
+.copyright-page {
+  padding-bottom: 40px;
+}
+
+.cr-ic {
+  font-size: 28px;
+  color: var(--accent-red);
+  margin-right: 12px;
+}
+
+.match-badge {
+  background-color: rgba(255, 78, 69, 0.15);
+  color: var(--accent-red);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cr-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cr-action-btn {
+  background-color: #3f3f3f;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cr-action-btn.primary {
+  background-color: var(--accent-blue);
+  color: #000;
+}
+
+.empty-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 64px;
+  color: var(--text-secondary);
+}
+
+.empty-ic {
+  font-size: 48px;
+}
+
+.takedown-modal {
+  background-color: var(--bg-secondary);
+  width: 600px;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+.takedown-modal-body {
+  padding: 24px;
+  font-size: 14px;
+}

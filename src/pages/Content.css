@@ -1,0 +1,310 @@
+.content-page {
+  padding-bottom: 40px;
+}
+
+.content-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 14px 28px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+
+.bulk-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--hover-bg);
+  padding: 10px 20px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.selected-count {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-blue);
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.bulk-select-dropdown {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.bulk-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--accent-red);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.content-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.filter-search-box {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.filter-icon {
+  color: var(--icon-color);
+  margin-right: 16px;
+}
+
+.filter-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  width: 100%;
+}
+
+.visibility-filter-select {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  min-height: 400px;
+}
+
+.content-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.content-table th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.content-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.checkbox-col {
+  width: 48px;
+  text-align: center;
+}
+
+.video-col {
+  min-width: 340px;
+  width: 40%;
+}
+
+.video-row:hover {
+  background-color: var(--hover-bg);
+}
+
+.video-cell {
+  display: flex;
+  gap: 16px;
+}
+
+.video-thumb-container {
+  position: relative;
+  width: 120px;
+  height: 68px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.video-thumb-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.video-duration-small {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.pl-icon {
+  font-size: 32px;
+  color: var(--accent-blue);
+  margin-right: 12px;
+}
+
+.video-info {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+}
+
+.video-title-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-title-link:hover {
+  color: var(--accent-blue);
+}
+
+.video-desc {
+  color: var(--text-secondary);
+  font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hover-actions {
+  display: none;
+  margin-top: 8px;
+  gap: 16px;
+}
+
+.video-row:hover .hover-actions {
+  display: flex;
+}
+
+.hover-actions a, .hover-actions button {
+  color: var(--icon-color);
+}
+
+.hover-actions a:hover, .hover-actions button:hover {
+  color: var(--text-primary);
+}
+
+.hover-actions span {
+  font-size: 18px;
+}
+
+.visibility-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visibility-icon {
+  font-size: 18px;
+}
+
+.visibility-icon.public {
+  color: #2ba640;
+}
+
+.visibility-icon.private {
+  color: #ff9800;
+}
+
+.visibility-icon.unlisted {
+  color: var(--text-secondary);
+}
+
+.restriction-badge.warning {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.date-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-type {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.no-content-cell {
+  text-align: center;
+  padding: 40px !important;
+  color: var(--text-secondary);
+}
+
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-controls button {
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.pagination-controls button:disabled {
+  color: var(--text-disabled);
+}

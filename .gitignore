@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Installers
+*.dmg
+
+# OAuth secrets
+client_secret*.json
+
+# IDE
+.vscode/
+.idea/server/tokens.json
+client_secret*.json

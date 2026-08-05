@@ -1,0 +1,100 @@
+.audio-library-page {
+  padding-bottom: 90px;
+}
+
+.pb-player {
+  padding-bottom: 80px;
+}
+
+.play-track-btn, .star-track-btn, .dl-track-btn {
+  color: var(--icon-color);
+  display: flex;
+  align-items: center;
+}
+
+.play-track-btn:hover, .dl-track-btn:hover {
+  color: var(--accent-blue);
+}
+
+.star-track-btn .active-star {
+  color: #ffc107 !important;
+}
+
+.track-name {
+  font-weight: 500;
+  color: #fff;
+}
+
+.genre-chip {
+  background-color: var(--hover-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.playing-row {
+  background-color: rgba(62, 166, 255, 0.1) !important;
+}
+
+/* Floating Bottom Audio Player */
+.bottom-audio-player {
+  position: fixed;
+  bottom: 0;
+  left: 256px;
+  right: 0;
+  height: 64px;
+  background-color: #282828;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 24px;
+  z-index: 900;
+}
+
+.player-play-btn {
+  background-color: var(--accent-blue);
+  color: #000;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-track-details {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+}
+
+.p-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.p-artist {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.player-progress-bar {
+  flex: 1;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.p-progress-fill {
+  height: 100%;
+  background-color: var(--accent-blue);
+  transition: width 0.3s ease;
+}
+
+.player-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+:root {
+  /* YouTube Studio Modern Dark Theme Colors */
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #0f0f0f;
+  --bg-card: #1f1f1f;
+  --text-primary: #f1f1f1;
+  --text-secondary: #aaaaaa;
+  --text-disabled: #717171;
+  --accent-red: #ff4e45;
+  --accent-blue: #3ea6ff;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.08);
+  --active-pill-bg: rgba(255, 255, 255, 0.08);
+  --icon-color: #aaaaaa;
+  
+  --font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Material Symbols Adjustments */
+.material-symbols-outlined {
+  color: var(--icon-color);
+  font-size: 24px;
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 300,
+  'GRAD' 0,
+  'opsz' 24;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.main-content-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #717171;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #909090;
+}
