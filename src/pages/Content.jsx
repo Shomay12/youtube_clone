@@ -271,21 +271,31 @@ const Content = () => {
                           
                           {/* Row Action Buttons on Hover */}
                           <div className="hover-actions">
-                            <Link to={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`} title="Details"><span className="material-symbols-outlined">edit</span></Link>
-                            <Link to={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/analytics`} title="Analytics"><span className="material-symbols-outlined">insert_chart</span></Link>
-                            <Link to={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/comments`} title="Comments"><span className="material-symbols-outlined">comment</span></Link>
-                            <button title="Copy link" onClick={() => copyLink(item.id)}><span className="material-symbols-outlined">link</span></button>
-                            <button title="Delete" onClick={() => handleDeleteOne(item.id, item.title)}><span className="material-symbols-outlined">delete</span></button>
+                            <Link to={`${CHANNEL_PREFIX}/video/${item.id}`} title="Details">
+                              <span className="material-symbols-outlined">edit</span>
+                            </Link>
+                            <Link to={`${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days?video=${item.id}`} title="Analytics">
+                              <span className="material-symbols-outlined">insert_chart</span>
+                            </Link>
+                            <Link to={`${CHANNEL_PREFIX}/community/comments`} title="Comments">
+                              <span className="material-symbols-outlined">comment</span>
+                            </Link>
+                            <Link to={`${CHANNEL_PREFIX}/monetization/overview`} title="Monetization">
+                              <span className="material-symbols-outlined">monetization_on</span>
+                            </Link>
+                            <button title="Options" onClick={(e) => { e.stopPropagation(); copyLink(item.id); }}>
+                              <span className="material-symbols-outlined">more_vert</span>
+                            </button>
                           </div>
                         </div>
                       </div>
                     </td>
                     <td>
                       <div className="visibility-cell">
-                        <span className={`material-symbols-outlined visibility-icon ${item.visibility.toLowerCase()}`}>
+                        <span className={`material-symbols-outlined visibility-icon ${(item.visibility || 'Public').toLowerCase()}`}>
                           {item.visibility === 'Public' ? 'visibility' : item.visibility === 'Private' ? 'visibility_off' : 'link'}
                         </span>
-                        {item.visibility}
+                        {item.visibility || 'Public'}
                       </div>
                     </td>
                     <td>

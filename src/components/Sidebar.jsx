@@ -9,9 +9,11 @@ const Sidebar = ({ isCollapsed, onOpenSettings }) => {
   const navigate = useNavigate();
 
   const videoMatch = location.pathname.match(/\/video\/([^/]+)/);
-  const activeVideoId = videoMatch ? videoMatch[1] : null;
+  const searchParams = new URLSearchParams(location.search);
+  const queryVideoId = searchParams.get('video') || searchParams.get('v');
+  const activeVideoId = (videoMatch ? videoMatch[1] : null) || queryVideoId;
   const isVideoContext = !!activeVideoId;
-  const currentVideo = (activeVideoId ? videos.find(v => v.id === activeVideoId) : null) || videos[0] || {};
+  const currentVideo = (activeVideoId ? videos.find(v => v.id === activeVideoId || String(v.id) === String(activeVideoId)) : null) || videos[0] || {};
 
   const CHANNEL_PREFIX = '/channel/UCqpdVWIzEQUcbf4pAxlneOQ';
 
@@ -29,7 +31,7 @@ const Sidebar = ({ isCollapsed, onOpenSettings }) => {
 
   const videoMenuItems = [
     { icon: 'edit', label: 'Details', path: `${CHANNEL_PREFIX}/video/${currentVideo.id}/edit`, key: 'details' },
-    { icon: 'insert_chart', label: 'Analytics', path: `${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days`, key: 'analytics' },
+    { icon: 'insert_chart', label: 'Analytics', path: `${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days?video=${currentVideo.id}`, key: 'analytics' },
     { icon: 'content_cut', label: 'Editor', path: `${CHANNEL_PREFIX}/video/${currentVideo.id}/edit`, key: 'editor' },
     { icon: 'comment', label: 'Comments', path: `${CHANNEL_PREFIX}/community/comments`, key: 'community' },
     { icon: 'translate', label: 'Languages', path: `${CHANNEL_PREFIX}/languages`, key: 'languages' },

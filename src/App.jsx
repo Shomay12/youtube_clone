@@ -16,6 +16,7 @@ import Copyright from './pages/Copyright';
 import Earn from './pages/Earn';
 import Customization from './pages/Customization';
 import AudioLibrary from './pages/AudioLibrary';
+import CRM from './pages/CRM';
 
 const CHANNEL_PREFIX = '/channel/UCqpdVWIzEQUcbf4pAxlneOQ';
 
@@ -79,7 +80,12 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <Routes>
+        {/* CRM — standalone, no YT Studio layout */}
+        <Route path="/crm/*" element={<CRM />} />
+        {/* YouTube Studio — full layout with TopNav + Sidebar */}
+        <Route path="/*" element={<AppContent />} />
+      </Routes>
     </BrowserRouter>
   );
 }

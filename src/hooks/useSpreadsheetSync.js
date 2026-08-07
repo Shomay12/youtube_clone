@@ -50,7 +50,9 @@ export function useSpreadsheetSync() {
       unsubscribeRef.current = SpreadsheetDataService.subscribeToEvents(async (event) => {
         if (event.type === 'data-updated') {
           await loadFromSpreadsheet(true, true);
-          showToast('Spreadsheet updated — data reloaded', 'info');
+          if (!useStore.getState().hasCrmOverrides) {
+            showToast('Spreadsheet updated — data reloaded', 'info');
+          }
         }
       });
     }

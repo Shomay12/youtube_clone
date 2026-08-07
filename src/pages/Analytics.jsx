@@ -58,19 +58,29 @@ const Analytics = () => {
 
   const [activeTab, setActiveTab] = useState('Overview');
 
+  // Derive video context BEFORE the useEffect that depends on isVideoMode
+  const searchParams = new URLSearchParams(location.search);
+  const videoIdFromQuery = searchParams.get('video') || searchParams.get('v');
+  const targetVideoId = id || videoIdFromQuery;
+  const video = targetVideoId ? videos.find(v => v.id === targetVideoId || String(v.id) === String(targetVideoId)) : null;
+  const isVideoMode = Boolean(video);
+  const currentVideo = video || videos[0] || {};
+
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('tab-content')) setActiveTab('Content');
+    if (path.includes('tab-reach') || path.includes('tab-content')) setActiveTab(isVideoMode ? 'Reach' : 'Content');
+    else if (path.includes('tab-engagement')) setActiveTab('Engagement');
     else if (path.includes('tab-audience')) setActiveTab('Audience');
     else if (path.includes('tab-revenue')) setActiveTab('Revenue');
     else if (path.includes('tab-trends')) setActiveTab('Trends');
     else if (path.includes('tab-overview')) setActiveTab('Overview');
-  }, [location.pathname]);
+  }, [location.pathname, isVideoMode]);
 
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     const slug = `tab-${tabName.toLowerCase()}`;
-    navigate(`${CHANNEL_PREFIX}/analytics/${slug}/period-last-28-days`);
+    const search = location.search ? location.search : '';
+    navigate(`${CHANNEL_PREFIX}/analytics/${slug}/period-last-28-days${search}`);
   };
   const [selectedMetric, setSelectedMetric] = useState('views');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -83,10 +93,6 @@ const Analytics = () => {
   const [revenueMakeMoneyFilter, setRevenueMakeMoneyFilter] = useState('All');
   const [revenueContentFilter, setRevenueContentFilter] = useState('Videos');
   const [deviceTypeFilter, setDeviceTypeFilter] = useState('All');
-
-  const video = id ? videos.find(v => v.id === id) : null;
-  const isVideoMode = Boolean(video);
-  const currentVideo = video || videos[0] || {};
 
   // Continuous Realtime Ticker Interval
   useEffect(() => {
@@ -193,7 +199,7 @@ const Analytics = () => {
       <div className="analytics-header">
         <div>
           <h1 className="dashboard-title">
-            {isVideoMode ? `Video analytics: ${currentVideo.title}` : 'Channel analytics'}
+            {isVideoMode ? 'Video analytics' : 'Channel analytics'}
           </h1>
           
           {/* Prompt Pills under Title */}
@@ -224,9 +230,9 @@ const Analytics = () => {
               onClick={() => setShowDatePicker(!showDatePicker)}
               title="Select analytics date range"
             >
-              <span className="date-sub-text">{dateRangeLabel}</span>
+              <span className="date-sub-text">{isVideoMode ? 'Jul 22, 2026 – Now' : dateRangeLabel}</span>
               <span className="date-main-text">
-                <span>{DATE_PRESETS.find(p => p.key === selectedDateRange)?.label || 'Last 28 days'}</span>
+                <span>{isVideoMode ? 'Since published' : (DATE_PRESETS.find(p => p.key === selectedDateRange)?.label || 'Last 28 days')}</span>
                 <span className="material-symbols-outlined date-arrow">keyboard_arrow_down</span>
               </span>
             </div>
@@ -255,7 +261,7 @@ const Analytics = () => {
 
       {/* Navigation Tabs */}
       <div className="content-tabs">
-        {['Overview', 'Content', 'Audience', 'Revenue', 'Trends'].map(tab => (
+        {(isVideoMode ? ['Overview', 'Reach', 'Engagement', 'Audience', 'Revenue'] : ['Overview', 'Content', 'Audience', 'Revenue', 'Trends']).map(tab => (
           <button
             key={tab}
             className={`tab ${activeTab === tab ? 'active' : ''}`}
@@ -271,10 +277,14 @@ const Analytics = () => {
         <div className="overview-tab-content">
           <div className="analytics-headline-box">
             <h2 className="analytics-headline-title">
-              Keep it up! Your channel got about the same number of views as usual.
+              {isVideoMode 
+                ? 'Views are up 51%! More people than usual are watching this video from YouTube search results.'
+                : 'Keep it up! Your channel got about the same number of views as usual.'}
             </h2>
             <p className="analytics-headline-sub">
-              Your channel got {aggregated.viewsFormatted} views in this selected period
+              {isVideoMode
+                ? `This video has gotten ${aggregated.viewsFormatted || '45.1K'} views since it was published`
+                : `Your channel got ${aggregated.viewsFormatted} views in this selected period`}
             </p>
           </div>
 
@@ -290,12 +300,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Views</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.viewsFormatted}</span>
-                      <span className="green-circle-badge" title="About the same as usual">
-                        <span className="material-symbols-outlined">check</span>
-                      </span>
+                      <span>{aggregated.viewsFormatted || '45.1K'}</span>
+                      <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }} title="Check badge">check_circle</span>
                     </div>
-                    <div className="metric-sub-label">About the same as usual</div>
+                    <div className="metric-sub-label">{isVideoMode ? '15.3K more than usual' : 'About the same as usual'}</div>
                   </div>
 
                   <div
@@ -304,12 +312,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Watch time (hours)</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.watchTimeHrsFormatted}</span>
-                      <span className="green-circle-badge" title="More than usual">
-                        <span className="material-symbols-outlined">arrow_upward</span>
-                      </span>
+                      <span>{aggregated.watchTimeHrsFormatted || '1.3K'}</span>
+                      <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }} title="Check badge">check_circle</span>
                     </div>
-                    <div className="metric-sub-label">In this period</div>
+                    <div className="metric-sub-label">{isVideoMode ? 'About the same as usual' : 'In this period'}</div>
                   </div>
 
                   <div
@@ -318,10 +324,7 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Subscribers</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.subscribersNetFormatted}</span>
-                      <span className="gray-circle-badge" title="Subscribers net">
-                        <span className="material-symbols-outlined">arrow_downward</span>
-                      </span>
+                      <span>{aggregated.subscribersNetFormatted || '+214'}</span>
                     </div>
                     <div className="metric-sub-label">In this period</div>
                   </div>
@@ -332,10 +335,7 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.revenueFormatted}</span>
-                      <span className="green-circle-badge" title="More than usual">
-                        <span className="material-symbols-outlined">arrow_upward</span>
-                      </span>
+                      <span>{aggregated.revenueFormatted || '₹5,849.33'}</span>
                     </div>
                     <div className="metric-sub-label">Derived from (Views / 1000) × RPM</div>
                   </div>
@@ -366,37 +366,119 @@ const Analytics = () => {
                 </div>
               </div>
 
-              {/* Your top content in this period Card */}
-              <StudioCard title="Your top content in this period">
-                <div className="top-content-table-container">
-                  <div className="top-content-header-row">
-                    <span className="col-content">Content</span>
-                    <span className="col-duration">Average view duration</span>
-                    <span className="col-views">Views</span>
-                  </div>
-
-                  <div className="top-content-list">
-                    {videos.slice(0, 7).map((vid, idx) => (
-                      <div className="top-content-row" key={vid.id || idx}>
-                        <span className="row-number">{idx + 1}</span>
-                        <img src={vid.thumbnail} alt="" className="row-thumb" />
-                        <div className="row-info">
-                          <div className="row-title" title={vid.title}>{vid.title}</div>
-                          {idx === 0 ? (
-                            <button className="brainstorm-pill">
-                              <span className="sparkle-icon">✦</span> Brainstorm video ideas
-                            </button>
-                          ) : (
-                            <span className="row-date">{vid.publishDate || vid.date || 'Jul 9, 2026'}</span>
-                          )}
-                        </div>
-                        <span className="row-duration">{vid.avgViewDuration || vid.duration || '10:18'} ({vid.ctr ? `${vid.ctr}%` : '29.3%'})</span>
-                        <span className="row-views">{vid.viewsFormatted || vid.views?.toLocaleString()}</span>
+              {/* If Video Mode, show What's going on & How viewers found this video cards */}
+              {isVideoMode ? (
+                <>
+                  <StudioCard title="What's going on?">
+                    <div style={{ padding: '4px 0', fontSize: '13px', color: '#f1f1f1', lineHeight: '1.6' }}>
+                      <p style={{ marginBottom: '16px', color: '#aaaaaa' }}>
+                        This video is appearing more often on YouTube search results compared to other videos on your channel.
+                        The topic or format of this video might be driving more interest from search results. Think about how you can use this in the future.
+                      </p>
+                      <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px' }}>check_circle</span>
+                        <strong>More impressions from YouTube search</strong>
                       </div>
-                    ))}
+                      <p style={{ color: '#aaaaaa', fontSize: '12px', paddingLeft: '28px' }}>
+                        This video appeared 361,089 times in search results — that's more than the 6,600–68,300 that's typical in this time frame.
+                      </p>
+                    </div>
+                  </StudioCard>
+
+                  <StudioCard title="How viewers found this video" subtitle="Traffic sources">
+                    <div style={{ padding: '4px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #303030', color: '#aaaaaa', fontSize: '12px' }}>
+                        <span>Traffic source</span>
+                        <span>% of views</span>
+                        <span>Views</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                          <span>YouTube search</span>
+                          <span style={{ color: '#aaaaaa' }}>81.1%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            36.6K <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px' }}>arrow_circle_up</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                          <span>YouTube recommendations</span>
+                          <span style={{ color: '#aaaaaa' }}>7.6%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            3.4K <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
+                          <span style={{ color: '#aaaaaa' }}>↳ YouTube Home</span>
+                          <span style={{ color: '#aaaaaa' }}>6.8%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            3.1K <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
+                          <span style={{ color: '#aaaaaa' }}>↳ Up next</span>
+                          <span style={{ color: '#aaaaaa' }}>0.8%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            360 <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                          <span>Other YouTube features</span>
+                          <span style={{ color: '#aaaaaa' }}>6.9%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            3.1K <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                          <span>Direct or unknown</span>
+                          <span style={{ color: '#aaaaaa' }}>1.1%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            496 <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                          <span>Other</span>
+                          <span style={{ color: '#aaaaaa' }}>2.3%</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            1K <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </StudioCard>
+                </>
+              ) : (
+                /* Your top content in this period Card */
+                <StudioCard title="Your top content in this period">
+                  <div className="top-content-table-container">
+                    <div className="top-content-header-row">
+                      <span className="col-content">Content</span>
+                      <span className="col-duration">Average view duration</span>
+                      <span className="col-views">Views</span>
+                    </div>
+
+                    <div className="top-content-list">
+                      {videos.slice(0, 7).map((vid, idx) => (
+                        <div className="top-content-row" key={vid.id || idx}>
+                          <span className="row-number">{idx + 1}</span>
+                          <img src={vid.thumbnail} alt="" className="row-thumb" />
+                          <div className="row-info">
+                            <div className="row-title" title={vid.title}>{vid.title}</div>
+                            {idx === 0 ? (
+                              <button className="brainstorm-pill">
+                                <span className="sparkle-icon">✦</span> Brainstorm video ideas
+                              </button>
+                            ) : (
+                              <span className="row-date">{vid.publishDate || vid.date || 'Jul 9, 2026'}</span>
+                            )}
+                          </div>
+                          <span className="row-duration">{vid.avgViewDuration || vid.duration || '10:18'} ({vid.ctr ? `${vid.ctr}%` : '29.3%'})</span>
+                          <span className="row-views">{vid.viewsFormatted || vid.views?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </StudioCard>
+                </StudioCard>
+              )}
             </div>
 
             {/* Right Column: Realtime, Podcast & Latest Content Rail */}
@@ -407,15 +489,15 @@ const Analytics = () => {
                 <div className="realtime-status-row">
                   <span className="live-dot" /> Updating live
                 </div>
-                <div className="realtime-big-number">{channelInfo.subscribers?.toLocaleString() || aggregated.subscribersNet?.toLocaleString()}</div>
-                <div className="realtime-sub-text">Subscribers</div>
+                <div className="realtime-big-number">{isVideoMode ? '183' : (channelInfo.subscribers?.toLocaleString() || aggregated.subscribersNet?.toLocaleString())}</div>
+                <div className="realtime-sub-text">{isVideoMode ? 'Views · Last 48 hours' : 'Subscribers'}</div>
                 
-                <button className="see-live-count-btn">See live count</button>
+                {!isVideoMode && <button className="see-live-count-btn">See live count</button>}
 
-                <hr className="studio-divider" />
+                {!isVideoMode && <hr className="studio-divider" />}
 
-                <div className="realtime-big-number">{realtimeDataset.total48HourViews?.toLocaleString()}</div>
-                <div className="realtime-sub-text">Views · Last 48 hours</div>
+                {!isVideoMode && <div className="realtime-big-number">{realtimeDataset.total48HourViews?.toLocaleString()}</div>}
+                {!isVideoMode && <div className="realtime-sub-text">Views · Last 48 hours</div>}
 
                 <div className="realtime-bar-chart-box">
                   <ResponsiveContainer width="100%" height={60}>
@@ -429,19 +511,48 @@ const Analytics = () => {
                   </div>
                 </div>
 
-                <div className="realtime-top-content-section">
-                  <div className="top-content-rail-header">
-                    <span>Top content</span>
-                    <span>Views</span>
-                  </div>
-                  {videos.slice(0, 3).map(v => (
-                    <div className="rail-content-row" key={v.id}>
-                      <img src={v.thumbnail} alt="" />
-                      <span className="rail-title">{v.title}</span>
-                      <span className="rail-val">{(v.views * 0.08).toFixed(0)}</span>
+                {isVideoMode ? (
+                  <div className="realtime-top-content-section" style={{ marginTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#aaaaaa', marginBottom: '8px' }}>
+                      <span>Top traffic sources</span>
+                      <span>Views</span>
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                      <span>YouTube search</span>
+                      <span>47.5%</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                      <span>Browse features</span>
+                      <span>18.6%</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                      <span>Channel pages</span>
+                      <span>14.2%</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                      <span>Other YouTube features</span>
+                      <span>9.3%</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                      <span>External</span>
+                      <span>3.6%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="realtime-top-content-section">
+                    <div className="top-content-rail-header">
+                      <span>Top content</span>
+                      <span>Views</span>
+                    </div>
+                    {videos.slice(0, 3).map(v => (
+                      <div className="rail-content-row" key={v.id}>
+                        <img src={v.thumbnail} alt="" />
+                        <span className="rail-title">{v.title}</span>
+                        <span className="rail-val">{(v.views * 0.08).toFixed(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <button className="see-more-btn margin-top-12">See more</button>
               </div>
@@ -500,6 +611,281 @@ const Analytics = () => {
                 <button className="see-video-analytics-btn">See video analytics</button>
               </div>
             </aside>
+          </div>
+        </div>
+      )}
+
+      {/* REACH TAB (Video Analytics Mode) */}
+      {activeTab === 'Reach' && (
+        <div className="reach-tab-page">
+          <div className="analytics-card hero-chart-card">
+            <div className="metrics-selector-row">
+              <div className={`metric-selector-item ${selectedMetric === 'impressions' ? 'active' : ''}`} onClick={() => setSelectedMetric('impressions')}>
+                <div className="metric-selector-label">Impressions</div>
+                <div className="metric-selector-val"><span>4.4L</span></div>
+              </div>
+              <div className={`metric-selector-item ${selectedMetric === 'ctr' ? 'active' : ''}`} onClick={() => setSelectedMetric('ctr')}>
+                <div className="metric-selector-label">Impressions click-through rate</div>
+                <div className="metric-selector-val"><span>9.0%</span></div>
+              </div>
+              <div className={`metric-selector-item ${selectedMetric === 'views' ? 'active' : ''}`} onClick={() => setSelectedMetric('views')}>
+                <div className="metric-selector-label">Views</div>
+                <div className="metric-selector-val">
+                  <span>{aggregated.viewsFormatted || '45.1K'}</span>
+                  <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }}>check_circle</span>
+                </div>
+                <div className="metric-sub-label">15.3K more than usual</div>
+              </div>
+              <div className={`metric-selector-item ${selectedMetric === 'uniqueViewers' ? 'active' : ''}`} onClick={() => setSelectedMetric('uniqueViewers')}>
+                <div className="metric-selector-label">Unique viewers <span className="material-symbols-outlined card-info-icon">info</span></div>
+                <div className="metric-selector-val"><span>35.5K</span></div>
+              </div>
+            </div>
+            <div className="chart-container-wrapper">
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={2} fill="rgba(129, 140, 248, 0.15)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="card-footer-action">
+              <button className="see-more-btn">See more</button>
+            </div>
+          </div>
+
+          <div className="studio-two-column margin-top-20">
+            <div className="audience-col">
+              <StudioCard title="How viewers find this video" subtitle="Views · Since published">
+                <div className="how-viewers-find-container">
+                  <div className="donut-chart-wrapper">
+                    <PieChart width={140} height={140}>
+                      <Pie data={[{ name: 'Search', value: 81.2 }, { name: 'Browse', value: 8.0 }, { name: 'Other', value: 6.9 }, { name: 'Direct', value: 1.1 }, { name: 'External', value: 0.9 }, { name: 'Others', value: 2.0 }]} cx={65} cy={65} innerRadius={42} outerRadius={62} dataKey="value">
+                        <Cell fill="#818cf8" /><Cell fill="#a855f7" /><Cell fill="#38bdf8" /><Cell fill="#6366f1" /><Cell fill="#c084fc" /><Cell fill="#475569" />
+                      </Pie>
+                    </PieChart>
+                    <div className="donut-center-label">Traffic<br />Sources</div>
+                  </div>
+                  <div className="traffic-sources-bars">
+                    <FormatDistributionRow label="YouTube search" value="81.2%" maxVal={100} barColor="#818cf8" />
+                    <FormatDistributionRow label="Browse features" value="8.0%" maxVal={100} barColor="#a855f7" />
+                    <FormatDistributionRow label="Other YouTube features" value="6.9%" maxVal={100} barColor="#38bdf8" />
+                    <FormatDistributionRow label="Direct or unknown" value="1.1%" maxVal={100} barColor="#6366f1" />
+                    <FormatDistributionRow label="External" value="0.9%" maxVal={100} barColor="#c084fc" />
+                    <FormatDistributionRow label="Others" value="2.0%" maxVal={100} barColor="#475569" />
+                  </div>
+                </div>
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="External sites or apps" subtitle="Views · Since published">
+                <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Proportion of your total traffic: <strong>0.9%</strong></div>
+                <FormatDistributionRow label="WhatsApp" value="50.0%" maxVal={100} barColor="#818cf8" />
+                <FormatDistributionRow label="whatsapp.com" value="19.4%" maxVal={100} barColor="#818cf8" />
+                <FormatDistributionRow label="Google Search" value="13.0%" maxVal={100} barColor="#818cf8" />
+                <FormatDistributionRow label="WhatsApp Business" value="6.4%" maxVal={100} barColor="#818cf8" />
+                <FormatDistributionRow label="instagram.com" value="1.5%" maxVal={100} barColor="#818cf8" />
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="Content suggesting this video" subtitle="Views · Since published">
+                <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Proportion of your total traffic: <strong>0.8%</strong></div>
+                <FormatDistributionRow label="Motu Patlu AI Video Kaise Banaye | Motu Patlu Tr..." value="4.4%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="4.2%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="4.2%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="2.5%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="1.9%" maxVal={10} barColor="#818cf8" />
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="Playlists featuring this video" subtitle="Views · Since published">
+                <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Proportion of your total traffic: <strong>0.1%</strong></div>
+                <p style={{ color: '#aaa', fontSize: '13px', padding: '12px 0' }}>Not enough traffic data to show this report</p>
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+            </div>
+
+            <div className="audience-col">
+              <StudioCard title="Impressions and how they led to watch time" subtitle="Data available Jul 22 – Aug 5, 2026 (15 days)">
+                <div className="youtube-funnel-container">
+                  <div className="funnel-level level-1">
+                    <div className="funnel-label">Impressions</div>
+                    <div className="funnel-value">4.4L</div>
+                  </div>
+                  <div className="funnel-mid-note">
+                    15.6% from YouTube recommending your content <span className="material-symbols-outlined card-info-icon">info</span>
+                  </div>
+                  <div className="funnel-level level-2">
+                    <div className="funnel-text">9.0% click-through rate</div>
+                  </div>
+                  <div className="funnel-level level-3">
+                    <div className="funnel-label">Views from impressions</div>
+                    <div className="funnel-value">39.2K</div>
+                  </div>
+                  <div className="funnel-level level-4">
+                    <div className="funnel-text">1:48 average view duration</div>
+                  </div>
+                  <div className="funnel-level level-5">
+                    <div className="funnel-label">Watch time from impressions (hours)</div>
+                    <div className="funnel-value">1.2K</div>
+                  </div>
+                </div>
+              </StudioCard>
+
+              <StudioCard title="Bell notifications sent" subtitle="Since published">
+                <div className="bell-notification-items">
+                  <div className="bell-item">
+                    <span className="material-symbols-outlined bell-icon">notifications</span>
+                    <div className="bell-info">
+                      <div className="bell-title">Mobile push notifications</div>
+                      <div className="bell-subtext">Excluding inbox delivery <span className="material-symbols-outlined card-info-icon">info</span></div>
+                    </div>
+                    <div className="bell-val">3.8K</div>
+                  </div>
+                  <div className="bell-item">
+                    <span className="material-symbols-outlined bell-icon">notifications_active</span>
+                    <div className="bell-info">
+                      <div className="bell-title">Notification click-through rate</div>
+                      <div className="bell-subtext">Typical on YouTube: 0.5% – 2.5%</div>
+                    </div>
+                    <div className="bell-val">0.8%</div>
+                  </div>
+                  <div className="bell-item">
+                    <span className="material-symbols-outlined bell-icon">bar_chart</span>
+                    <div className="bell-info"><div className="bell-title">Views from bell notifications</div></div>
+                    <div className="bell-val">31</div>
+                  </div>
+                </div>
+              </StudioCard>
+
+              <StudioCard title="YouTube search terms" subtitle="Views · Since published">
+                <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Proportion of your total traffic: <strong>81.2%</strong></div>
+                <FormatDistributionRow label="motu patlu ai video kaise banaye" value="17.3%" maxVal={20} barColor="#818cf8" />
+                <FormatDistributionRow label="how to make motu patlu ai video" value="4.8%" maxVal={20} barColor="#818cf8" />
+                <FormatDistributionRow label="ai motu patlu video kaise banaye" value="2.5%" maxVal={20} barColor="#818cf8" />
+                <FormatDistributionRow label="how to create motu patlu ai video" value="1.9%" maxVal={20} barColor="#818cf8" />
+                <FormatDistributionRow label="motu patlu ai video editing" value="1.9%" maxVal={20} barColor="#818cf8" />
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENGAGEMENT TAB (Video Analytics Mode) */}
+      {activeTab === 'Engagement' && (
+        <div className="engagement-tab-page">
+          <div className="analytics-card hero-chart-card">
+            <div className="metrics-selector-row">
+              <div className={`metric-selector-item ${selectedMetric === 'watchTimeHrs' ? 'active' : ''}`} onClick={() => setSelectedMetric('watchTimeHrs')}>
+                <div className="metric-selector-label">Watch time (hours)</div>
+                <div className="metric-selector-val">
+                  <span>1.3K</span>
+                  <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }}>check_circle</span>
+                </div>
+                <div className="metric-sub-label">About the same as usual</div>
+              </div>
+              <div className={`metric-selector-item ${selectedMetric === 'avgViewDuration' ? 'active' : ''}`} onClick={() => setSelectedMetric('avgViewDuration')}>
+                <div className="metric-selector-label">Average view duration</div>
+                <div className="metric-selector-val">
+                  <span>1:45</span>
+                  <span className="material-symbols-outlined" style={{ color: '#aaa', fontSize: '20px', marginLeft: '6px' }}>arrow_circle_down</span>
+                </div>
+                <div className="metric-sub-label">0:53 less than usual</div>
+              </div>
+            </div>
+            <div className="chart-container-wrapper">
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={2} fill="rgba(236, 72, 153, 0.15)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="card-footer-action">
+              <button className="see-more-btn">See more</button>
+            </div>
+          </div>
+
+          <div className="studio-two-column margin-top-20">
+            <div className="audience-col">
+              <StudioCard title="Hype" subtitle="First 7 days">
+                <div style={{ display: 'flex', gap: '32px', padding: '12px 0' }}>
+                  <div>
+                    <div style={{ fontSize: '24px', fontWeight: '600' }}>4.4K</div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>Hype points</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '24px', fontWeight: '600' }}>74</div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>Hypes</div>
+                  </div>
+                </div>
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="Audience retention" subtitle="Since uploaded (lifetime)">
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0' }}>
+                  <span style={{ color: '#aaa' }}>Average view duration</span>
+                  <strong>1:45</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0' }}>
+                  <span style={{ color: '#aaa' }}>Average percentage viewed</span>
+                  <strong>29.3%</strong>
+                </div>
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '500', color: '#aaa', marginBottom: '8px' }}>Key moments for audience retention</div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <button style={{ backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '12px', fontWeight: '500' }}>Intro</button>
+                    <button style={{ backgroundColor: '#272727', color: '#fff', border: '1px solid #383838', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>2 Spikes</button>
+                    <button style={{ backgroundColor: '#272727', color: '#fff', border: '1px solid #383838', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>Dip</button>
+                  </div>
+                  <div style={{ width: '100%', height: '180px', backgroundColor: '#1f1f1f', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={currentVideo.thumbnail || '/thumbnails/1.webp'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                </div>
+              </StudioCard>
+            </div>
+
+            <div className="audience-col">
+              <StudioCard title="Likes (vs. dislikes)" subtitle="Since published">
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali Ai Video Kaise B..." value="96.5%" maxVal={100} barColor="#ec4899" />
+                <FormatDistributionRow label="Channel average" value="97.7%" maxVal={100} barColor="#717171" />
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="End screen element click rate" subtitle="Since uploaded (lifetime)">
+                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali Ai Video Kaise B..." value="1.0%" maxVal={5} barColor="#ec4899" />
+                <FormatDistributionRow label="Channel average" value="1.7%" maxVal={5} barColor="#717171" />
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+
+              <StudioCard title="Top Remixed" subtitle="Shorts created using parts of this video · Since published">
+                <div style={{ display: 'flex', gap: '32px', padding: '12px 0' }}>
+                  <div>
+                    <div style={{ fontSize: '24px', fontWeight: '600' }}>8</div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>Remix views</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '24px', fontWeight: '600' }}>1</div>
+                    <div style={{ fontSize: '12px', color: '#aaa' }}>Remixes</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                  <img src={currentVideo.thumbnail || '/thumbnails/1.webp'} alt="" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '500' }}>#saudiarabia ##</div>
+                    <div style={{ fontSize: '11px', color: '#aaa' }}>Alim · 6 views · 1 week ago</div>
+                  </div>
+                </div>
+                <button className="see-more-btn margin-top-16">See more</button>
+              </StudioCard>
+            </div>
           </div>
         </div>
       )}

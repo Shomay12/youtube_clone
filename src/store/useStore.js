@@ -147,9 +147,7 @@ export const useStore = create(
       ...EMPTY_STATE,
       toast: null,
 
-      showToast: (message, type = 'success') => {
-        set({ toast: { message, type, id: Date.now() } });
-      },
+      showToast: () => {},
       clearToast: () => set({ toast: null }),
 
       // Date range changer
@@ -247,6 +245,33 @@ export const useStore = create(
           };
         }
 
+        if (state.hasCrmOverrides && state.channelInfo) {
+          const crmViews = state.channelInfo.viewsLast28Days || agg.views;
+          const crmWatch = state.channelInfo.watchTimeLast28Days || agg.watchTimeHrs;
+          const crmRev = state.channelInfo.revenueLast28Days || agg.revenue;
+          const crmSubs = state.channelInfo.subscribersGainedLast28Days || agg.subscribersNet;
+
+          const mergedAgg = {
+            ...agg,
+            views: crmViews,
+            viewsFormatted: state.channelInfo.viewsLast28DaysFormatted || agg.viewsFormatted,
+            watchTimeHrs: crmWatch,
+            watchTimeHrsFormatted: state.channelInfo.watchTimeLast28DaysFormatted || agg.watchTimeHrsFormatted,
+            revenue: crmRev,
+            revenueFormatted: state.channelInfo.revenueLast28DaysFormatted || agg.revenueFormatted,
+            subscribersNet: crmSubs,
+            subscribersNetFormatted: state.channelInfo.subscribersGainedLast28DaysFormatted || agg.subscribersNetFormatted,
+          };
+
+          return {
+            dateRangeLabel: `${startStr} – ${endStr}`,
+            daily: filteredDaily,
+            aggregated: mergedAgg,
+            trafficSources: getTrafficSources(crmViews),
+            audience: getAudienceBreakdown(crmViews)
+          };
+        }
+
         return {
           dateRangeLabel: `${startStr} – ${endStr}`,
           daily: filteredDaily,
@@ -267,8 +292,14 @@ export const useStore = create(
           ]);
 
           const parsedData = applySpreadsheetData(data);
+          const currentStore = get();
+          const hasCrm = currentStore.hasCrmOverrides;
+
           set({
             ...parsedData,
+            // Preserve active CRM data overrides if present
+            channelInfo: hasCrm ? currentStore.channelInfo : parsedData.channelInfo,
+            videos: hasCrm ? currentStore.videos : parsedData.videos,
             mode: 'spreadsheet',
             isSpreadsheetLoading: false,
             lastSpreadsheetSync: status.lastLoadedAt || new Date().toISOString(),
@@ -437,7 +468,163 @@ export const useStore = create(
         notifications: state.notifications.map(n => ({ ...n, read: true }))
       })),
 
-      reloadFromSpreadsheet: () => get().refreshSpreadsheet()
+      // ─── CRM Actions ───────────────────────────────────────────────────
+      // Update a single video's numeric metrics; auto-recalculates revenue from views × rpm
+      updateVideoMetrics: (id, updates) => set((state) => ({
+        hasCrmOverrides: true,
+        videos: state.videos.map(v => {
+          if (String(v.id) !== String(id)) return v;
+          const merged = { ...v, ...updates };
+          const rpm = Number(updates.rpm ?? v.rpm ?? 33.64);
+          const views = Number(updates.views ?? v.views ?? 0);
+          const revenue = (views / 1000) * rpm;
+          return {
+            ...merged,
+            rpm,
+            views,
+            revenue,
+            viewsFormatted: views >= 1_000_000
+              ? `${(views / 1_000_000).toFixed(1)}M`
+              : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
+            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          };
+        })
+      })),
+
+      // Update channel-level CRM metrics (subscribers, views, revenue, RPM …)
+      crmUpdateChannelMetrics: (updates) => set((state) => {
+        const subs = updates.subscribers !== undefined ? Number(updates.subscribers) : state.channelInfo.subscribers;
+        const subsGained = updates.subscribersGainedLast28Days !== undefined ? Number(updates.subscribersGainedLast28Days) : (state.channelInfo.subscribersGainedLast28Days || 0);
+        const views28 = updates.viewsLast28Days !== undefined ? Number(updates.viewsLast28Days) : (state.channelInfo.viewsLast28Days || 0);
+        const watchTime28 = updates.watchTimeLast28Days !== undefined ? Number(updates.watchTimeLast28Days) : (state.channelInfo.watchTimeLast28Days || 0);
+        const revenue28 = updates.revenueLast28Days !== undefined ? Number(updates.revenueLast28Days) : (state.channelInfo.revenueLast28Days || 0);
+
+        const fmtSubs = (n) => n.toLocaleString('en-IN');
+        const fmtViews = (n) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 100_000 ? `${(n / 100_000).toFixed(1)}L` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
+        const fmtWatch = (n) => n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`;
+        const fmtRev = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        return {
+          hasCrmOverrides: true,
+          channelInfo: {
+            ...state.channelInfo,
+            ...updates,
+            subscribers: subs,
+            subscribersFormatted: fmtSubs(subs),
+            subscribersGainedLast28Days: subsGained,
+            subscribersGainedLast28DaysFormatted: `${subsGained > 0 ? '+' : ''}${subsGained}`,
+            viewsLast28Days: views28,
+            viewsLast28DaysFormatted: fmtViews(views28),
+            watchTimeLast28Days: watchTime28,
+            watchTimeLast28DaysFormatted: fmtWatch(watchTime28),
+            revenueLast28Days: revenue28,
+            revenueLast28DaysFormatted: fmtRev(revenue28)
+          }
+        };
+      }),
+
+      // Set a single RPM across all videos and recalculate revenues
+      bulkSetVideoRPM: (rpm) => set((state) => ({
+        hasCrmOverrides: true,
+        videos: state.videos.map(v => {
+          const r = Number(rpm);
+          const revenue = (v.views / 1000) * r;
+          return {
+            ...v,
+            rpm: r,
+            revenue,
+            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          };
+        })
+      })),
+
+      // Multiply all video views by a factor (e.g. 1.2 = +20%)
+      bulkMultiplyViews: (factor) => set((state) => ({
+        hasCrmOverrides: true,
+        videos: state.videos.map(v => {
+          const views = Math.round(v.views * factor);
+          const revenue = (views / 1000) * (v.rpm || 33.64);
+          return {
+            ...v,
+            views,
+            viewsFormatted: views >= 1_000_000 ? `${(views / 1_000_000).toFixed(1)}M` : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
+            revenue,
+            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          };
+        })
+      })),
+
+      // Apply preset scenarios or import JSON
+      crmApplyPreset: (presetKey) => set((state) => {
+        const fmt = (n) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
+        const fmtUSD = (n) => `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        if (presetKey === 'viral') {
+          const subs = 25000000;
+          const subsGained = 1200000;
+          const views = 45000000;
+          const watchTime = 180000;
+          const revenue = 185000.00;
+          return {
+            hasCrmOverrides: true,
+            channelInfo: {
+              ...state.channelInfo,
+              subscribers: subs,
+              subscribersFormatted: fmt(subs),
+              subscribersGainedLast28Days: subsGained,
+              subscribersGainedLast28DaysFormatted: `+${fmt(subsGained)}`,
+              viewsLast28Days: views,
+              viewsLast28DaysFormatted: fmt(views),
+              watchTimeLast28Days: watchTime,
+              watchTimeLast28DaysFormatted: fmt(watchTime),
+              revenueLast28Days: revenue,
+              revenueLast28DaysFormatted: fmtUSD(revenue),
+            },
+            videos: state.videos.map(v => {
+              const newViews = v.views * 5;
+              const newRpm = 45.00;
+              const newRev = (newViews / 1000) * newRpm;
+              return {
+                ...v,
+                views: newViews,
+                viewsFormatted: fmt(newViews),
+                rpm: newRpm,
+                revenue: newRev,
+                revenueFormatted: fmtUSD(newRev)
+              };
+            })
+          };
+        }
+
+        if (presetKey === 'high_rpm') {
+          return {
+            hasCrmOverrides: true,
+            videos: state.videos.map(v => {
+              const newRpm = 85.50;
+              const newRev = (v.views / 1000) * newRpm;
+              return {
+                ...v,
+                rpm: newRpm,
+                revenue: newRev,
+                revenueFormatted: fmtUSD(newRev)
+              };
+            })
+          };
+        }
+
+        return {};
+      }),
+
+      crmImportState: (newState) => set((state) => ({
+        ...state,
+        ...newState,
+        hasCrmOverrides: true
+      })),
+
+      reloadFromSpreadsheet: () => {
+        set({ hasCrmOverrides: false });
+        return get().refreshSpreadsheet();
+      }
     }),
     {
       name: 'yt-studio-analytics-v2',
@@ -445,7 +632,10 @@ export const useStore = create(
       partialize: (state) => ({
         settings: state.settings,
         spreadsheetConfig: state.spreadsheetConfig,
-        selectedDateRange: state.selectedDateRange
+        selectedDateRange: state.selectedDateRange,
+        hasCrmOverrides: state.hasCrmOverrides,
+        channelInfo: state.channelInfo,
+        videos: state.videos
       })
     }
   )
