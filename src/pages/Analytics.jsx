@@ -294,6 +294,44 @@ const Analytics = () => {
     return [lower, upper];
   }, [daily]);
 
+  const formatXAxisDate = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    if (!dateStr.includes('-') && !dateStr.includes('/')) return dateStr;
+
+    const parts = dateStr.split('-');
+    let dateObj;
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      dateObj = new Date(dateStr);
+    }
+
+    if (isNaN(dateObj.getTime())) return dateStr;
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[dateObj.getMonth()];
+    const day = dateObj.getDate();
+    const year = dateObj.getFullYear();
+    return `${month} ${day}, ${year}`;
+  };
+
+  const formatYAxisValue = (val) => {
+    if (typeof val !== 'number') return val;
+    if (val === 0) return '0';
+    if (Math.abs(val) >= 1000000) {
+      const formatted = (val / 1000000).toFixed(1);
+      return formatted.endsWith('.0') ? `${Math.round(val / 1000000)}M` : `${formatted}M`;
+    }
+    if (Math.abs(val) >= 1000) {
+      const formatted = (val / 1000).toFixed(1);
+      return formatted.endsWith('.0') ? `${Math.round(val / 1000)}K` : `${formatted}K`;
+    }
+    return `${val}`;
+  };
+
   // Custom tooltips for Recharts formatted in USD ($)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -303,7 +341,7 @@ const Analytics = () => {
         : (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(1)}K` : val);
       return (
         <div className="yt-chart-tooltip">
-          <div className="tooltip-date">{label}</div>
+          <div className="tooltip-date">{formatXAxisDate(label)}</div>
           <div className="tooltip-value">
             <span className="tooltip-dot" />
             <span>{selectedMetric.toUpperCase()}: <strong>{formatted}</strong></span>
@@ -592,9 +630,10 @@ const Analytics = () => {
                         stroke="#717171"
                         tickLine={false}
                         axisLine={false}
+                        tickFormatter={formatXAxisDate}
                         ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                       />
-                      <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                      <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={(v) => selectedMetric === 'revenue' ? `$${formatYAxisValue(v)}` : formatYAxisValue(v)} />
                       <Tooltip content={<CustomTooltip />} />
                       <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                       <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={2.5} fill="url(#colorBlue)" />
@@ -919,9 +958,10 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={formatXAxisDate}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={2} fill="rgba(129, 140, 248, 0.15)" />
                   {videoUploadPoints.map((v, i) => (
@@ -1100,9 +1140,10 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={formatXAxisDate}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={2} fill="rgba(236, 72, 153, 0.15)" />
                   {videoUploadPoints.map((v, i) => (
@@ -1452,9 +1493,10 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={formatXAxisDate}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                   <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={2.5} fill="url(#colorPurple)" />
@@ -1825,9 +1867,10 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={formatXAxisDate}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} domain={revenueDomain} tickFormatter={v => `$${v.toLocaleString()}`} />
+                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} domain={revenueDomain} tickFormatter={v => `$${formatYAxisValue(v)}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                   <Area type="monotone" dataKey="revenue" stroke="#14b8a6" strokeWidth={2.5} fill="url(#colorTeal)" />
@@ -1963,8 +2006,8 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={daily}>
                 <CartesianGrid stroke="#303030" vertical={false} />
-                <XAxis dataKey="date" />
-                <YAxis orientation="right" />
+                <XAxis dataKey="date" tickFormatter={formatXAxisDate} />
+                <YAxis orientation="right" tickFormatter={formatYAxisValue} />
                 <Tooltip />
                 <Area type="monotone" dataKey="views" stroke="#ff9800" fill="rgba(255, 152, 0, 0.12)" strokeWidth={2.5} />
               </AreaChart>
