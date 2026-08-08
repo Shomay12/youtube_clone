@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceDot
 } from 'recharts';
+import { StudioCheckBadge, StudioUpBadge, StudioDownBadge } from '../components/StudioBadges';
 import './Analytics.css';
 
 const StudioCard = ({ title, subtitle, infoIcon, children, className = '', headerExtra = null }) => (
@@ -109,20 +110,173 @@ const Analytics = () => {
 
   const { daily, aggregated, trafficSources, audience, dateRangeLabel } = computedData;
 
-  // Enhance daily data with typical range simulation for Recharts
+  // Enhance daily data with typical range simulation & slight upward incline for 7 days / monthly date ranges
   const dailyWithTypical = useMemo(() => {
-    return (daily || []).map((item) => {
-      const val = item[selectedMetric] || 0;
-      const baseTypical = typeof val === 'number' ? val * 0.85 : 1000;
-      const revVal = Number(item.revenue) || 0;
+    if (selectedDateRange === 'first24') {
+      const points = [];
+      const totalV = aggregated?.views || 10400;
+      const totalW = aggregated?.watchTimeHrs || 335.2;
+      const totalR = aggregated?.revenue || 711.08;
+      const totalS = aggregated?.subscribersNet || 33;
+
+      for (let h = 0; h <= 24; h++) {
+        const progress = h / 24;
+        const factor = Math.pow(progress, 1.4);
+        const vVal = Math.round(totalV * factor);
+        const wVal = parseFloat((totalW * factor).toFixed(1));
+        const rVal = parseFloat((totalR * factor).toFixed(2));
+        const sVal = Math.round(totalS * factor);
+
+        let dateLabel = `${h}`;
+        if (h === 24) dateLabel = '24 hours';
+
+        const metricMap = {
+          views: vVal,
+          watchTimeHrs: wVal,
+          revenue: rVal,
+          subscribersNet: sVal,
+          impressions: Math.round(vVal * 12.5),
+          ctr: 8.9,
+          avgViewDuration: '1:45'
+        };
+
+        const activeVal = metricMap[selectedMetric] ?? vVal;
+        const typicalUpper = Math.round(activeVal * 0.72);
+
+        points.push({
+          date: dateLabel,
+          hour: h,
+          views: vVal,
+          watchTimeHrs: wVal,
+          revenue: rVal,
+          subscribersNet: sVal,
+          [selectedMetric]: activeVal,
+          typicalLower: Math.round(typicalUpper * 0.6),
+          typicalUpper: typicalUpper,
+          revenueTypicalUpper: Math.round(rVal * 0.75)
+        });
+      }
+      return points;
+    }
+
+    const list = daily || [];
+    const n = list.length;
+    if (n === 0) return [];
+
+    // Determine earliest published video date
+    let firstVideoDateStr = '2026-02-14';
+    if (isVideoMode && video) {
+      firstVideoDateStr = video.publishDate || video.date || '2026-02-14';
+    } else {
+      const videoDates = (videos || []).map(v => v.publishDate || v.date).filter(Boolean).sort();
+      if (videoDates.length > 0) {
+        firstVideoDateStr = videoDates[0];
+      }
+    }
+
+    const firstVidDateObj = new Date(firstVideoDateStr);
+    const rampUpStartDateObj = new Date(firstVidDateObj);
+    rampUpStartDateObj.setDate(rampUpStartDateObj.getDate() - 3);
+
+    // Step 1: Compute baseline values with smooth upward incline & zero before first video date - 3 days
+    const basePoints = list.map((item, index) => {
+      const progress = n > 1 ? index / (n - 1) : 0.5;
+      const inclineMultiplier = 0.78 + progress * 0.44;
+      const wave = Math.sin(progress * Math.PI * 2.2) * 0.12;
+      const combinedMultiplier = inclineMultiplier + wave;
+
+      // Zero-ramp factor: 0 before rampUpStartDate, smooth ramp to 1 at firstVidDate
+      const itemDateObj = new Date(item.date);
+      let zeroRampFactor = 1.0;
+      if (itemDateObj < rampUpStartDateObj) {
+        zeroRampFactor = 0.0;
+      } else if (itemDateObj < firstVidDateObj) {
+        const totalDiff = firstVidDateObj.getTime() - rampUpStartDateObj.getTime();
+        const currentDiff = itemDateObj.getTime() - rampUpStartDateObj.getTime();
+        zeroRampFactor = totalDiff > 0 ? Math.min(1.0, Math.max(0.0, currentDiff / totalDiff)) : 1.0;
+      }
+
+      const rawVal = item[selectedMetric] || 0;
+      const val = typeof rawVal === 'number' ? Math.round(rawVal * combinedMultiplier * zeroRampFactor) : (zeroRampFactor === 0 ? 0 : rawVal);
+
+      const rawViews = item.views || 0;
+      const views = Math.round(rawViews * combinedMultiplier * zeroRampFactor);
+
+      const rawWatch = item.watchTimeHrs || 0;
+      const watchTimeHrs = parseFloat((rawWatch * combinedMultiplier * zeroRampFactor).toFixed(1));
+
+      const rawRev = item.revenue || 0;
+      const revenue = parseFloat((rawRev * combinedMultiplier * zeroRampFactor).toFixed(2));
+
+      const rawSubs = item.subscribersNet || 0;
+      const subscribersNet = Math.round(rawSubs * combinedMultiplier * zeroRampFactor);
+
       return {
         ...item,
-        typicalLower: Math.round(baseTypical * 0.7),
-        typicalUpper: Math.round(baseTypical * 1.3),
-        revenueTypicalUpper: Math.round(revVal * 1.15)
+        views,
+        watchTimeHrs,
+        revenue,
+        subscribersNet,
+        val
       };
     });
-  }, [daily, selectedMetric]);
+
+    // Step 2: Apply 5-point weighted Moving Average smoothing
+    const windowSize = Math.min(5, Math.floor(n / 2) || 1);
+
+    return basePoints.map((item, index) => {
+      let sumVal = 0, sumViews = 0, sumWatch = 0, sumRev = 0, sumSubs = 0, weightSum = 0;
+
+      for (let offset = -windowSize; offset <= windowSize; offset++) {
+        const idx = Math.min(Math.max(index + offset, 0), n - 1);
+        const weight = 1 / (1 + Math.abs(offset) * 0.5);
+        sumVal += (basePoints[idx].val || 0) * weight;
+        sumViews += (basePoints[idx].views || 0) * weight;
+        sumWatch += (basePoints[idx].watchTimeHrs || 0) * weight;
+        sumRev += (basePoints[idx].revenue || 0) * weight;
+        sumSubs += (basePoints[idx].subscribersNet || 0) * weight;
+        weightSum += weight;
+      }
+
+      const smoothedVal = Math.round(sumVal / weightSum);
+      const smoothedViews = Math.round(sumViews / weightSum);
+      const smoothedWatch = parseFloat((sumWatch / weightSum).toFixed(1));
+      const smoothedRev = parseFloat((sumRev / weightSum).toFixed(2));
+      const smoothedSubs = Math.round(sumSubs / weightSum);
+
+      const baseTypical = typeof smoothedVal === 'number' ? smoothedVal * 0.85 : 1000;
+
+      return {
+        ...item,
+        views: smoothedViews,
+        watchTimeHrs: smoothedWatch,
+        revenue: smoothedRev,
+        subscribersNet: smoothedSubs,
+        [selectedMetric]: smoothedVal,
+        typicalLower: Math.round(baseTypical * 0.72),
+        typicalUpper: Math.round(baseTypical * 1.25),
+        revenueTypicalUpper: Math.round(smoothedRev * 1.15)
+      };
+    });
+  }, [daily, selectedMetric, selectedDateRange, isVideoMode, aggregated, videos, video]);
+
+  // Compute video upload marker points present within the rendered chart range
+  const videoUploadPoints = useMemo(() => {
+    if (!dailyWithTypical || dailyWithTypical.length === 0) return [];
+    const dateSet = new Set(dailyWithTypical.map(d => d.date));
+    const points = [];
+    (videos || []).forEach(v => {
+      const pubDate = v.publishDate || v.date;
+      if (pubDate && dateSet.has(pubDate)) {
+        points.push({
+          date: pubDate,
+          title: v.title,
+          id: v.id
+        });
+      }
+    });
+    return points;
+  }, [dailyWithTypical, videos]);
 
   // Calculate dynamic Y-axis domain for Revenue chart with 5-10% padding
   const revenueDomain = useMemo(() => {
@@ -144,9 +298,9 @@ const Analytics = () => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const val = payload[0].value;
-      const formatted = selectedMetric === 'revenue' 
-        ? `$${val?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-        : (val >= 1000000 ? `${(val/1000000).toFixed(1)}M` : val >= 1000 ? `${(val/1000).toFixed(1)}K` : val);
+      const formatted = selectedMetric === 'revenue'
+        ? `$${val?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(1)}K` : val);
       return (
         <div className="yt-chart-tooltip">
           <div className="tooltip-date">{label}</div>
@@ -160,15 +314,69 @@ const Analytics = () => {
     return null;
   };
 
-  const DATE_PRESETS = [
-    { key: 'last28', label: 'Last 28 days' },
-    { key: 'last7', label: 'Last 7 days' },
-    { key: 'last90', label: 'Last 90 days' },
-    { key: '365', label: 'Last 365 days' },
-    { key: 'lifetime', label: 'Lifetime' },
-    { key: 'today', label: 'Today' },
-    { key: 'yesterday', label: 'Yesterday' }
-  ];
+  const datePickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setShowDatePicker(false);
+      }
+    };
+    if (showDatePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDatePicker]);
+
+  const DATE_PRESET_GROUPS = useMemo(() => [
+    {
+      group: 'presets',
+      items: [
+        ...(isVideoMode ? [{ key: 'first24', label: 'First 24 hours' }] : []),
+        { key: 'last7', label: 'Last 7 days' },
+        { key: 'last28', label: 'Last 28 days' },
+        { key: 'last90', label: 'Last 90 days' },
+        { key: '365', label: 'Last 365 days' },
+        { key: 'lifetime', label: isVideoMode ? 'Since uploaded (lifetime)' : 'Lifetime' }
+      ]
+    },
+    {
+      group: 'years',
+      items: [
+        { key: '2026', label: '2026' },
+        { key: '2025', label: '2025' }
+      ]
+    },
+    {
+      group: 'months',
+      items: [
+        { key: 'august', label: 'August' },
+        { key: 'july', label: 'July' },
+        { key: 'june', label: 'June' }
+      ]
+    },
+    {
+      group: 'custom',
+      items: [
+        { key: 'custom', label: 'Custom' }
+      ]
+    }
+  ], [isVideoMode]);
+
+  const ALL_DATE_PRESETS = useMemo(() => [
+    { key: 'since_published', label: 'Since published' },
+    ...DATE_PRESET_GROUPS.flatMap(g => g.items)
+  ], [DATE_PRESET_GROUPS]);
+
+  const activePresetLabel = useMemo(() => {
+    if (isVideoMode && (selectedDateRange === 'since_published' || !selectedDateRange)) {
+      return 'Since published';
+    }
+    const found = ALL_DATE_PRESETS.find(p => p.key === selectedDateRange);
+    return found ? found.label : (isVideoMode ? 'Since published' : 'Last 28 days');
+  }, [isVideoMode, selectedDateRange, ALL_DATE_PRESETS]);
 
   // Top videos sorted by revenue calculated using (Views / 1000) * RPM
   const topEarningVideos = useMemo(() => {
@@ -201,7 +409,7 @@ const Analytics = () => {
           <h1 className="dashboard-title">
             {isVideoMode ? 'Video analytics' : 'Channel analytics'}
           </h1>
-          
+
           {/* Prompt Pills under Title */}
           <div className="analytics-prompt-pills">
             <button className="prompt-pill">
@@ -224,34 +432,48 @@ const Analytics = () => {
             Advanced mode
           </button>
 
-          <div className="yt-date-selector-wrapper">
-            <div 
-              className="yt-date-selector" 
+          <div className="yt-date-selector-wrapper" ref={datePickerRef}>
+            <div
+              className="yt-date-selector"
               onClick={() => setShowDatePicker(!showDatePicker)}
               title="Select analytics date range"
             >
               <span className="date-sub-text">{isVideoMode ? 'Jul 22, 2026 – Now' : dateRangeLabel}</span>
               <span className="date-main-text">
-                <span>{isVideoMode ? 'Since published' : (DATE_PRESETS.find(p => p.key === selectedDateRange)?.label || 'Last 28 days')}</span>
+                <span>{activePresetLabel}</span>
                 <span className="material-symbols-outlined date-arrow">keyboard_arrow_down</span>
               </span>
             </div>
 
             {showDatePicker && (
               <div className="date-picker-dropdown">
-                <div className="dropdown-header">Select Date Range</div>
-                {DATE_PRESETS.map(preset => (
-                  <div
-                    key={preset.key}
-                    className={`date-option ${selectedDateRange === preset.key ? 'active' : ''}`}
-                    onClick={() => {
-                      setDateRange(preset.key);
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <span>{preset.label}</span>
-                    {selectedDateRange === preset.key && <span className="material-symbols-outlined check-ic">check</span>}
-                  </div>
+                <div className="dropdown-active-header">
+                  <div className="dropdown-active-title">{activePresetLabel}</div>
+                  <div className="dropdown-updated-pill">Updated 1 min ago</div>
+                </div>
+
+                {DATE_PRESET_GROUPS.map((group, gIdx) => (
+                  <React.Fragment key={group.group}>
+                    <div className="dropdown-divider" />
+                    <div className="dropdown-group-items">
+                      {group.items.map(preset => {
+                        const isActive = selectedDateRange === preset.key;
+                        return (
+                          <div
+                            key={preset.key}
+                            className={`date-option ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                              setDateRange(preset.key);
+                              setShowDatePicker(false);
+                            }}
+                          >
+                            <span>{preset.label}</span>
+                            {isActive && <span className="material-symbols-outlined check-ic">check</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </React.Fragment>
                 ))}
               </div>
             )}
@@ -277,7 +499,7 @@ const Analytics = () => {
         <div className="overview-tab-content">
           <div className="analytics-headline-box">
             <h2 className="analytics-headline-title">
-              {isVideoMode 
+              {isVideoMode
                 ? 'Views are up 51%! More people than usual are watching this video from YouTube search results.'
                 : 'Keep it up! Your channel got about the same number of views as usual.'}
             </h2>
@@ -301,7 +523,7 @@ const Analytics = () => {
                     <div className="metric-selector-label">Views</div>
                     <div className="metric-selector-val">
                       <span>{aggregated.viewsFormatted || '45.1K'}</span>
-                      <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }} title="Check badge">check_circle</span>
+                      <StudioCheckBadge style={{ marginLeft: '6px' }} />
                     </div>
                     <div className="metric-sub-label">{isVideoMode ? '15.3K more than usual' : 'About the same as usual'}</div>
                   </div>
@@ -312,10 +534,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Watch time (hours)</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.watchTimeHrsFormatted || '1.3K'}</span>
-                      <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }} title="Check badge">check_circle</span>
+                      <span>{(aggregated.watchTimeHrsFormatted || '1.3K').replace(/\s*hrs\s*/gi, '')}</span>
+                      <StudioCheckBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">{isVideoMode ? 'About the same as usual' : 'In this period'}</div>
+                    <div className="metric-sub-label">About the same as usual</div>
                   </div>
 
                   <div
@@ -335,28 +557,75 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.revenueFormatted || '₹5,849.33'}</span>
+                      <span>{aggregated.revenueFormatted || '$5,849.33'}</span>
+                      <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">Derived from (Views / 1000) × RPM</div>
+                    <div className="metric-sub-label">$615.89 more than usual</div>
                   </div>
                 </div>
 
                 {/* Chart Area */}
+                {(selectedDateRange === 'first24' || isVideoMode) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: '#aaaaaa', padding: '12px 16px 4px 16px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#00e5ff' }}></span>
+                      This video
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#555555' }}></span>
+                      Typical performance
+                    </span>
+                  </div>
+                )}
                 <div className="chart-container-wrapper">
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0}/>
+                          <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                      <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#717171"
+                        tickLine={false}
+                        axisLine={false}
+                        ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
+                      />
                       <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
                       <Tooltip content={<CustomTooltip />} />
                       <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                       <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={2.5} fill="url(#colorBlue)" />
+                      {videoUploadPoints.map((v, i) => (
+                        <ReferenceDot
+                          key={`marker-overview-${v.id}-${v.date}-${i}`}
+                          x={v.date}
+                          y={0}
+                          r={0}
+                          isFront={true}
+                          shape={(props) => {
+                            if (!props.cx || !props.cy) return null;
+                            return (
+                              <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                                <title>{`${v.title} (${v.date})`}</title>
+                                <rect
+                                  x="0"
+                                  y="0"
+                                  width="20"
+                                  height="16"
+                                  rx="3"
+                                  fill="#212121"
+                                  stroke="#444444"
+                                  strokeWidth="1"
+                                />
+                                <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                              </g>
+                            );
+                          }}
+                        />
+                      ))}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -376,7 +645,7 @@ const Analytics = () => {
                         The topic or format of this video might be driving more interest from search results. Think about how you can use this in the future.
                       </p>
                       <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px' }}>check_circle</span>
+                        <StudioCheckBadge />
                         <strong>More impressions from YouTube search</strong>
                       </div>
                       <p style={{ color: '#aaaaaa', fontSize: '12px', paddingLeft: '28px' }}>
@@ -397,28 +666,28 @@ const Analytics = () => {
                           <span>YouTube search</span>
                           <span style={{ color: '#aaaaaa' }}>81.1%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            36.6K <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px' }}>arrow_circle_up</span>
+                            36.6K <StudioUpBadge />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                           <span>YouTube recommendations</span>
                           <span style={{ color: '#aaaaaa' }}>7.6%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            3.4K <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                            3.4K <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
                           <span style={{ color: '#aaaaaa' }}>↳ YouTube Home</span>
                           <span style={{ color: '#aaaaaa' }}>6.8%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            3.1K <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                            3.1K <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
                           <span style={{ color: '#aaaaaa' }}>↳ Up next</span>
                           <span style={{ color: '#aaaaaa' }}>0.8%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            360 <span className="material-symbols-outlined" style={{ color: '#aaaaaa', fontSize: '20px' }}>arrow_circle_down</span>
+                            360 <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
@@ -491,7 +760,7 @@ const Analytics = () => {
                 </div>
                 <div className="realtime-big-number">{isVideoMode ? '183' : (channelInfo.subscribers?.toLocaleString() || aggregated.subscribersNet?.toLocaleString())}</div>
                 <div className="realtime-sub-text">{isVideoMode ? 'Views · Last 48 hours' : 'Subscribers'}</div>
-                
+
                 {!isVideoMode && <button className="see-live-count-btn">See live count</button>}
 
                 {!isVideoMode && <hr className="studio-divider" />}
@@ -632,7 +901,7 @@ const Analytics = () => {
                 <div className="metric-selector-label">Views</div>
                 <div className="metric-selector-val">
                   <span>{aggregated.viewsFormatted || '45.1K'}</span>
-                  <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }}>check_circle</span>
+                  <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </div>
                 <div className="metric-sub-label">15.3K more than usual</div>
               </div>
@@ -645,10 +914,35 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
+                  />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={2} fill="rgba(129, 140, 248, 0.15)" />
+                  {videoUploadPoints.map((v, i) => (
+                    <ReferenceDot
+                      key={`marker-content-${v.id}-${v.date}-${i}`}
+                      x={v.date}
+                      y={0}
+                      r={0}
+                      isFront={true}
+                      shape={(props) => {
+                        if (!props.cx || !props.cy) return null;
+                        return (
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                            <title>{`${v.title} (${v.date})`}</title>
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                          </g>
+                        );
+                      }}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -784,7 +1078,7 @@ const Analytics = () => {
                 <div className="metric-selector-label">Watch time (hours)</div>
                 <div className="metric-selector-val">
                   <span>1.3K</span>
-                  <span className="material-symbols-outlined" style={{ color: '#2ba640', fontSize: '20px', marginLeft: '6px' }}>check_circle</span>
+                  <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </div>
                 <div className="metric-sub-label">About the same as usual</div>
               </div>
@@ -792,7 +1086,7 @@ const Analytics = () => {
                 <div className="metric-selector-label">Average view duration</div>
                 <div className="metric-selector-val">
                   <span>1:45</span>
-                  <span className="material-symbols-outlined" style={{ color: '#aaa', fontSize: '20px', marginLeft: '6px' }}>arrow_circle_down</span>
+                  <StudioDownBadge color="#aaaaaa" style={{ marginLeft: '6px' }} />
                 </div>
                 <div className="metric-sub-label">0:53 less than usual</div>
               </div>
@@ -801,10 +1095,35 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
+                  />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={2} fill="rgba(236, 72, 153, 0.15)" />
+                  {videoUploadPoints.map((v, i) => (
+                    <ReferenceDot
+                      key={`marker-engagement-${v.id}-${v.date}-${i}`}
+                      x={v.date}
+                      y={0}
+                      r={0}
+                      isFront={true}
+                      shape={(props) => {
+                        if (!props.cx || !props.cy) return null;
+                        return (
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                            <title>{`${v.title} (${v.date})`}</title>
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                          </g>
+                        );
+                      }}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1014,7 +1333,7 @@ const Analytics = () => {
                 </div>
                 <div className="funnel-level level-5">
                   <div className="funnel-label">Watch time from impressions (hours)</div>
-                  <div className="funnel-value">{aggregated.watchTimeHrsFormatted}</div>
+                  <div className="funnel-value">{(aggregated.watchTimeHrsFormatted || '').replace(/\s*hrs\s*/gi, '')}</div>
                 </div>
               </div>
             </StudioCard>
@@ -1060,12 +1379,12 @@ const Analytics = () => {
                   ]).map((t, idx) => {
                     const colors = ['#38bdf8', '#818cf8', '#a855f7', '#6366f1', '#475569'];
                     return (
-                      <FormatDistributionRow 
-                        key={t.source} 
-                        label={t.source} 
-                        value={`${t.percentage}%`} 
-                        maxVal={50} 
-                        barColor={colors[idx % colors.length]} 
+                      <FormatDistributionRow
+                        key={t.source}
+                        label={t.source}
+                        value={`${t.percentage}%`}
+                        maxVal={50}
+                        barColor={colors[idx % colors.length]}
                       />
                     );
                   })}
@@ -1123,16 +1442,41 @@ const Analytics = () => {
                 <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorPurple" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0}/>
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
+                  />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                   <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={2.5} fill="url(#colorPurple)" />
+                  {videoUploadPoints.map((v, i) => (
+                    <ReferenceDot
+                      key={`marker-audience-${v.id}-${v.date}-${i}`}
+                      x={v.date}
+                      y={0}
+                      r={0}
+                      isFront={true}
+                      shape={(props) => {
+                        if (!props.cx || !props.cy) return null;
+                        return (
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                            <title>{`${v.title} (${v.date})`}</title>
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                          </g>
+                        );
+                      }}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1215,9 +1559,9 @@ const Analytics = () => {
                       <img src={v.thumbnail} alt="" className="growing-thumb" />
                       <span className="growing-title">{v.title}</span>
                       <span className="growing-badge">
-                        {i === 0 ? <span className="green-grow-badge">Very high <span className="material-symbols-outlined">check_circle</span></span> :
-                         i < 4 ? <span className="green-grow-badge">Moderate <span className="material-symbols-outlined">check_circle</span></span> :
-                         <span className="gray-grow-badge">Low <span className="material-symbols-outlined">help</span></span>}
+                        {i === 0 ? <span className="green-grow-badge">Very high <StudioCheckBadge size={14} style={{ marginLeft: '4px' }} /></span> :
+                          i < 4 ? <span className="green-grow-badge">Moderate <StudioCheckBadge size={14} style={{ marginLeft: '4px' }} /></span> :
+                            <span className="gray-grow-badge">Low <span className="material-symbols-outlined">help</span></span>}
                       </span>
                     </div>
                   ))}
@@ -1461,7 +1805,7 @@ const Analytics = () => {
             <div className="revenue-hero-header">
               <div className="revenue-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
               <div className="revenue-big-val">
-                {aggregated.revenueFormatted} <span className="green-circle-badge"><span className="material-symbols-outlined">arrow_upward</span></span>
+                {aggregated.revenueFormatted} <StudioUpBadge style={{ marginLeft: '6px' }} />
               </div>
               <div className="revenue-subtext">Calculated from (Views / 1000) × RPM</div>
             </div>
@@ -1471,16 +1815,41 @@ const Analytics = () => {
                 <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTeal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0}/>
+                      <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#717171" tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
+                  />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} domain={revenueDomain} tickFormatter={v => `$${v.toLocaleString()}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                   <Area type="monotone" dataKey="revenue" stroke="#14b8a6" strokeWidth={2.5} fill="url(#colorTeal)" />
+                  {videoUploadPoints.map((v, i) => (
+                    <ReferenceDot
+                      key={`marker-revenue-${v.id}-${v.date}-${i}`}
+                      x={v.date}
+                      y={0}
+                      r={0}
+                      isFront={true}
+                      shape={(props) => {
+                        if (!props.cx || !props.cy) return null;
+                        return (
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                            <title>{`${v.title} (${v.date})`}</title>
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                          </g>
+                        );
+                      }}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

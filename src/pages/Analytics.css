@@ -294,6 +294,7 @@
   font-size: 11px;
   color: #aaaaaa;
   margin-top: 4px;
+  font-style: italic;
 }
 
 .chart-container-wrapper {
@@ -1353,43 +1354,66 @@
 /* Date Picker Dropdown */
 .date-picker-dropdown {
   position: absolute;
-  top: 44px;
+  top: calc(100% + 4px);
   right: 0;
-  width: 200px;
-  background-color: #282828;
-  border: 1px solid #3f3f3f;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  width: 220px;
+  background-color: #212121;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
   z-index: 1000;
-  padding: 6px 0;
+  padding: 8px 0;
+  overflow: hidden;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.date-picker-dropdown .dropdown-header {
-  padding: 8px 14px;
-  font-size: 11px;
-  font-weight: 600;
+.dropdown-active-header {
+  padding: 10px 16px 10px 16px;
+}
+
+.dropdown-active-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #f1f1f1;
+  margin-bottom: 4px;
+}
+
+.dropdown-updated-pill {
+  display: inline-block;
+  background-color: #383838;
   color: #aaaaaa;
-  border-bottom: 1px solid #3f3f3f;
-  text-transform: uppercase;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 400;
+}
+
+.date-picker-dropdown .dropdown-divider {
+  height: 1px;
+  background-color: #383838;
+  margin: 6px 0;
 }
 
 .date-option {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
+  padding: 9px 16px;
   font-size: 13px;
-  color: #ffffff;
+  color: #e1e1e1;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .date-option:hover {
-  background-color: #383838;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .date-option.active {
-  color: #38bdf8;
+  color: #ffffff;
   font-weight: 500;
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .check-ic {

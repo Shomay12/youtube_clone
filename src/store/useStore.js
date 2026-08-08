@@ -181,6 +181,9 @@ export const useStore = create(
         if (activeKey === 'today') {
           startStr = '2026-08-04';
           endStr = '2026-08-04';
+        } else if (activeKey === 'first24') {
+          startStr = '2026-08-03';
+          endStr = '2026-08-04';
         } else if (activeKey === 'yesterday') {
           const y = new Date(today);
           y.setDate(y.getDate() - 1);
@@ -206,9 +209,24 @@ export const useStore = create(
           s.setDate(s.getDate() - 364);
           startStr = formatDate(s);
           endStr = formatDate(today);
-        } else if (activeKey === 'lifetime') {
+        } else if (activeKey === 'lifetime' || activeKey === 'since_published') {
           startStr = '2025-08-01';
           endStr = '2026-08-04';
+        } else if (activeKey === '2026') {
+          startStr = '2026-01-01';
+          endStr = '2026-08-04';
+        } else if (activeKey === '2025') {
+          startStr = '2025-01-01';
+          endStr = '2025-12-31';
+        } else if (activeKey === 'august') {
+          startStr = '2026-08-01';
+          endStr = '2026-08-04';
+        } else if (activeKey === 'july') {
+          startStr = '2026-07-01';
+          endStr = '2026-07-31';
+        } else if (activeKey === 'june') {
+          startStr = '2026-06-01';
+          endStr = '2026-06-30';
         } else if (activeKey === 'custom') {
           startStr = state.customStartDate || '2026-07-07';
           endStr = state.customEndDate || '2026-08-04';
@@ -233,7 +251,7 @@ export const useStore = create(
               views: videoViews,
               viewsFormatted: videoViews >= 1000000 ? `${(videoViews / 1000000).toFixed(1)}M` : `${(videoViews / 1000).toFixed(0)}K`,
               watchTimeHrs: videoWatchTime,
-              watchTimeHrsFormatted: `${videoWatchTime.toLocaleString()} hrs`,
+              watchTimeHrsFormatted: `${videoWatchTime.toLocaleString()}`,
               revenue: videoRevenue,
               revenueFormatted: `$${videoRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
               rpm: targetVideo?.rpm || 33.64,

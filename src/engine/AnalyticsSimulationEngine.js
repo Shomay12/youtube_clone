@@ -36,7 +36,7 @@ export const RAW_VIDEOS = [
     ctr: 8.9,
     rpm: 34.10,
     cpm: 58.65,
-    publishDate: '2026-04-05',
+    publishDate: '2026-02-14',
     thumbnail: '/thumbnails/1.webp',
     category: 'Entertainment'
   },
@@ -52,7 +52,7 @@ export const RAW_VIDEOS = [
     ctr: 6.4,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-04-16',
+    publishDate: '2026-03-02',
     thumbnail: '/thumbnails/2.webp',
     category: 'Entertainment'
   },
@@ -68,7 +68,7 @@ export const RAW_VIDEOS = [
     ctr: 7.8,
     rpm: 33.70,
     cpm: 57.96,
-    publishDate: '2026-04-27',
+    publishDate: '2026-03-22',
     thumbnail: '/thumbnails/3.webp',
     category: 'Education'
   },
@@ -84,7 +84,7 @@ export const RAW_VIDEOS = [
     ctr: 4.9,
     rpm: 34.50,
     cpm: 59.34,
-    publishDate: '2026-05-08',
+    publishDate: '2026-04-10',
     thumbnail: '/thumbnails/4.webp',
     category: 'Science & Technology'
   },
@@ -100,7 +100,7 @@ export const RAW_VIDEOS = [
     ctr: 9.3,
     rpm: 33.20,
     cpm: 57.10,
-    publishDate: '2026-05-19',
+    publishDate: '2026-04-28',
     thumbnail: '/thumbnails/5.webp',
     category: 'Business'
   },
@@ -116,7 +116,7 @@ export const RAW_VIDEOS = [
     ctr: 6.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-05-30',
+    publishDate: '2026-05-15',
     thumbnail: '/thumbnails/6.webp',
     category: 'Education'
   },
@@ -132,7 +132,7 @@ export const RAW_VIDEOS = [
     ctr: 7.1,
     rpm: 33.40,
     cpm: 57.45,
-    publishDate: '2026-06-10',
+    publishDate: '2026-06-02',
     thumbnail: '/thumbnails/7.webp',
     category: 'Entertainment'
   },
@@ -148,7 +148,7 @@ export const RAW_VIDEOS = [
     ctr: 5.1,
     rpm: 32.80,
     cpm: 56.42,
-    publishDate: '2026-06-21',
+    publishDate: '2026-06-20',
     thumbnail: '/thumbnails/1.webp',
     category: 'Science & Technology'
   },
@@ -164,7 +164,7 @@ export const RAW_VIDEOS = [
     ctr: 8.4,
     rpm: 34.00,
     cpm: 58.48,
-    publishDate: '2026-07-02',
+    publishDate: '2026-07-12',
     thumbnail: '/thumbnails/2.webp',
     category: 'Science & Technology'
   },
@@ -180,7 +180,7 @@ export const RAW_VIDEOS = [
     ctr: 6.8,
     rpm: 33.60,
     cpm: 57.79,
-    publishDate: '2026-07-13',
+    publishDate: '2026-07-22',
     thumbnail: '/thumbnails/3.webp',
     category: 'Science & Technology'
   }
@@ -312,7 +312,7 @@ export function aggregateMetrics(filteredDaily, _videoId = null) {
       views: 0,
       viewsFormatted: '0',
       watchTimeHrs: 0,
-      watchTimeHrsFormatted: '0 hrs',
+      watchTimeHrsFormatted: '0',
       impressions: 0,
       impressionsFormatted: '0',
       ctr: 0,
@@ -354,7 +354,7 @@ export function aggregateMetrics(filteredDaily, _videoId = null) {
     views,
     viewsFormatted: formatCompact(views),
     watchTimeHrs: parseFloat(watchTimeHrs.toFixed(1)),
-    watchTimeHrsFormatted: `${formatCompact(Math.round(watchTimeHrs))} hrs`,
+    watchTimeHrsFormatted: `${formatCompact(Math.round(watchTimeHrs))}`,
     impressions,
     impressionsFormatted: formatCompact(impressions),
     ctr: avgCtr,

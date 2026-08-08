@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { StudioCheckBadge, StudioUpBadge, StudioDownBadge } from '../components/StudioBadges';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -158,22 +159,22 @@ const Dashboard = () => {
                   <div className="stat-row lv-highlight-row">
                     <span className="stat-label lv-hl-label">Views</span>
                     <span className="stat-value lv-hl-val">
-                      {latestVideo.viewsFormatted || (latestVideo.views ? (latestVideo.views >= 1000 ? `${(latestVideo.views/1000).toFixed(1)}K` : String(latestVideo.views)) : '45.1K')}
-                      <span className="lv-trend-badge lv-trend-up"><span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_upward</span></span>
+                      {latestVideo.viewsFormatted || (latestVideo.views ? (latestVideo.views >= 1000 ? `${(latestVideo.views / 1000).toFixed(1)}K` : String(latestVideo.views)) : '45.1K')}
+                      <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </span>
                   </div>
                   <div className="stat-row lv-highlight-row">
                     <span className="stat-label lv-hl-label">Impressions click-through rate</span>
                     <span className="stat-value lv-hl-val">
                       {latestVideo.ctr ? `${latestVideo.ctr}%` : '9.0%'}
-                      <span className="lv-trend-badge lv-trend-up"><span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_upward</span></span>
+                      <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </span>
                   </div>
                   <div className="stat-row lv-highlight-row">
                     <span className="stat-label lv-hl-label">Average view duration</span>
                     <span className="stat-value lv-hl-val">
                       {latestVideo.avd || '1:45'}
-                      <span className="lv-trend-badge lv-trend-down"><span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_downward</span></span>
+                      <StudioDownBadge color="#aaaaaa" style={{ marginLeft: '6px' }} />
                     </span>
                   </div>
                   {/* Catch me up row */}
@@ -212,23 +213,21 @@ const Dashboard = () => {
                 <span className="stat-label">Views</span>
                 <span className="stat-value ana-stat-val">
                   {channelInfo?.viewsLast28DaysFormatted || '0'}
-                  <span className="material-symbols-outlined ana-check-icon">check_circle</span>
+                  <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
               <div className="stat-row">
                 <span className="stat-label">Watch time (hours)</span>
                 <span className="stat-value ana-stat-val">
-                  {channelInfo?.watchTimeLast28DaysFormatted || '0 hrs'}
-                  <span className="material-symbols-outlined ana-check-icon">check_circle</span>
+                  {(channelInfo?.watchTimeLast28DaysFormatted || '0').replace(/\s*hrs\s*/gi, '')}
+                  <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
               <div className="stat-row">
                 <span className="stat-label">Estimated revenue</span>
                 <span className="stat-value ana-stat-val">
                   {channelInfo?.revenueLast28DaysFormatted || '$0'}
-                  <span className="lv-trend-badge lv-trend-up ana-arrow-badge">
-                    <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>arrow_upward</span>
-                  </span>
+                  <StudioUpBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
             </div>
@@ -445,7 +444,7 @@ const Dashboard = () => {
                 <span className="post-date"> • Aug 6, 2026</span>
               </div>
             </div>
-            <p className="post-question">Aapki Age kitni Hai ?</p>
+            <p className="post-question">what's your age ?</p>
             <div className="poll-options">
               {pollOptions.map((opt, i) => (
                 <div className="poll-option" key={i}>
