@@ -262,7 +262,7 @@ const Analytics = () => {
 
   // Compute video upload marker points present within the rendered chart range
   const videoUploadPoints = useMemo(() => {
-    if (!dailyWithTypical || dailyWithTypical.length === 0) return [];
+    if (isVideoMode || !dailyWithTypical || dailyWithTypical.length === 0) return [];
     const dateSet = new Set(dailyWithTypical.map(d => d.date));
     const points = [];
     (videos || []).forEach(v => {
@@ -276,7 +276,7 @@ const Analytics = () => {
       }
     });
     return points;
-  }, [dailyWithTypical, videos]);
+  }, [isVideoMode, dailyWithTypical, videos]);
 
   // Calculate dynamic Y-axis domain for Revenue chart with 5-10% padding
   const revenueDomain = useMemo(() => {
