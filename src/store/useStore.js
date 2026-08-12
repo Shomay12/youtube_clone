@@ -13,6 +13,24 @@ import {
   tickRealtimeData
 } from '../engine/AnalyticsSimulationEngine';
 
+export const formatINR = (val) => {
+  if (val === null || val === undefined) return '₹0.00';
+  if (typeof val === 'number') {
+    return `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  if (typeof val === 'string') {
+    let s = val.trim();
+    if (s.startsWith('₹')) return s;
+    if (s.startsWith('$')) s = s.slice(1);
+    const num = parseFloat(s.replace(/,/g, ''));
+    if (!isNaN(num)) {
+      return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `₹${s}`;
+  }
+  return String(val);
+};
+
 const INITIAL_REALTIME = generateRealtimeDataset();
 const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-07', '2026-08-04');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
@@ -27,8 +45,8 @@ const EMPTY_STATE = {
     watchTimeLast28DaysFormatted: INITIAL_AGG.watchTimeHrsFormatted,
     subscribersGainedLast28DaysFormatted: INITIAL_AGG.subscribersNetFormatted,
     revenueLast28DaysFormatted: INITIAL_AGG.revenueFormatted,
-    totalRevenueFormatted: '$721,577.00',
-    currency: 'USD'
+    totalRevenueFormatted: '₹7,21,577.00',
+    currency: 'INR'
   },
   videos: PROCESSED_VIDEOS,
   shorts: [],
@@ -63,7 +81,7 @@ const EMPTY_STATE = {
   ],
   spreadsheetWarnings: [],
   settings: {
-    currency: 'USD ($)',
+    currency: 'INR - Indian Rupee (₹)',
     theme: 'Dark',
     country: 'United States',
     keywords: 'AI, Autonomous Agents, Software Engineering, React, Node.js, System Design',
@@ -237,15 +255,49 @@ export const useStore = create(
 
         // Adjust for individual video proportional share if videoId is specified
         if (videoId) {
-          const targetVideo = state.videos.find(v => v.id === videoId) || state.videos[0];
+          const targetVideo = state.videos.find(v => v.id === videoId || String(v.id) === String(videoId)) || state.videos[0];
           const videoShare = targetVideo ? (targetVideo.views / 21450000) : 0.1;
           const videoViews = Math.round(agg.views * videoShare * 3.5);
           const videoRevenue = parseFloat(((videoViews / 1000) * (targetVideo?.rpm || 33.64)).toFixed(2));
           const videoWatchTime = parseFloat((videoViews * (targetVideo?.avgViewDurationSecs || 240) / 3600).toFixed(1));
 
+          const videoSubsGained = targetVideo?.subscribersGained !== undefined 
+            ? Number(targetVideo.subscribersGained) 
+            : Math.round(videoViews * 0.014);
+          const videoSubsLost = targetVideo?.subscribersLost !== undefined
+            ? Number(targetVideo.subscribersLost)
+            : Math.round(videoSubsGained * 0.12);
+          const videoSubsNet = targetVideo?.netSubscribers !== undefined
+            ? Number(targetVideo.netSubscribers)
+            : (videoSubsGained - videoSubsLost);
+
+          const fmtSubs = (s) => s >= 1_000_000 ? `+${(s / 1_000_000).toFixed(1)}M` : s >= 1_000 ? `+${(s / 1_000).toFixed(1)}K` : s >= 0 ? `+${s.toLocaleString()}` : `${s.toLocaleString()}`;
+
+          const totalViewsInDaily = filteredDaily.reduce((acc, d) => acc + (d.views || 0), 0) || 1;
+
+          const scaledDaily = filteredDaily.map(d => {
+            const dayWeight = (d.views || 0) / totalViewsInDaily;
+            const dViews = Math.round(videoViews * dayWeight);
+            const dRev = parseFloat(((dViews / 1000) * (targetVideo?.rpm || 33.64)).toFixed(2));
+            const dWatch = parseFloat((dViews * (targetVideo?.avgViewDurationSecs || 240) / 3600).toFixed(1));
+            const dSubsNet = Math.round(videoSubsNet * dayWeight);
+            const dSubsGained = Math.round(videoSubsGained * dayWeight);
+            const dSubsLost = Math.round(videoSubsLost * dayWeight);
+
+            return {
+              ...d,
+              views: dViews,
+              revenue: dRev,
+              watchTimeHrs: dWatch,
+              subscribersNet: dSubsNet,
+              subscribersGained: dSubsGained,
+              subscribersLost: dSubsLost
+            };
+          });
+
           return {
             dateRangeLabel: `${startStr} – ${endStr}`,
-            daily: filteredDaily,
+            daily: scaledDaily,
             aggregated: {
               ...agg,
               views: videoViews,
@@ -253,7 +305,11 @@ export const useStore = create(
               watchTimeHrs: videoWatchTime,
               watchTimeHrsFormatted: `${videoWatchTime.toLocaleString()}`,
               revenue: videoRevenue,
-              revenueFormatted: `$${videoRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              revenueFormatted: `₹${videoRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              subscribersNet: videoSubsNet,
+              subscribersGained: videoSubsGained,
+              subscribersLost: videoSubsLost,
+              subscribersNetFormatted: fmtSubs(videoSubsNet),
               rpm: targetVideo?.rpm || 33.64,
               cpm: targetVideo?.cpm || 58.00,
               ctr: targetVideo?.ctr || 8.5
@@ -276,7 +332,7 @@ export const useStore = create(
             watchTimeHrs: crmWatch,
             watchTimeHrsFormatted: state.channelInfo.watchTimeLast28DaysFormatted || agg.watchTimeHrsFormatted,
             revenue: crmRev,
-            revenueFormatted: state.channelInfo.revenueLast28DaysFormatted || agg.revenueFormatted,
+            revenueFormatted: formatINR(state.channelInfo.revenueLast28DaysFormatted || crmRev || agg.revenueFormatted),
             subscribersNet: crmSubs,
             subscribersNetFormatted: state.channelInfo.subscribersGainedLast28DaysFormatted || agg.subscribersNetFormatted,
           };
@@ -293,7 +349,10 @@ export const useStore = create(
         return {
           dateRangeLabel: `${startStr} – ${endStr}`,
           daily: filteredDaily,
-          aggregated: agg,
+          aggregated: {
+            ...agg,
+            revenueFormatted: formatINR(agg.revenueFormatted || agg.revenue)
+          },
           trafficSources: getTrafficSources(agg.views),
           audience: getAudienceBreakdown(agg.views)
         };
@@ -487,24 +546,37 @@ export const useStore = create(
       })),
 
       // ─── CRM Actions ───────────────────────────────────────────────────
-      // Update a single video's numeric metrics; auto-recalculates revenue from views × rpm
+      // Update a single video's numeric metrics, subscriber gain & thumbnail
       updateVideoMetrics: (id, updates) => set((state) => ({
         hasCrmOverrides: true,
         videos: state.videos.map(v => {
           if (String(v.id) !== String(id)) return v;
           const merged = { ...v, ...updates };
-          const rpm = Number(updates.rpm ?? v.rpm ?? 33.64);
-          const views = Number(updates.views ?? v.views ?? 0);
+          const rpm = Number(updates.rpm !== undefined ? updates.rpm : (v.rpm ?? 33.64));
+          const views = Number(updates.views !== undefined ? updates.views : (v.views ?? 0));
           const revenue = (views / 1000) * rpm;
+          const likes = Number(updates.likes !== undefined ? updates.likes : (v.likes ?? Math.round(views * 0.046)));
+          const comments = Number(updates.comments !== undefined ? updates.comments : (v.comments ?? Math.round(views * 0.0034)));
+          const subsGained = Number(updates.subscribersGained !== undefined ? updates.subscribersGained : (v.subscribersGained ?? Math.round(views * 0.014)));
+          const subsLost = Number(updates.subscribersLost !== undefined ? updates.subscribersLost : (v.subscribersLost ?? Math.round(subsGained * 0.12)));
+          const netSubs = subsGained - subsLost;
+          const thumbnail = updates.thumbnail !== undefined ? updates.thumbnail : v.thumbnail;
+
           return {
             ...merged,
+            thumbnail,
             rpm,
             views,
             revenue,
+            likes,
+            comments,
+            subscribersGained: subsGained,
+            subscribersLost: subsLost,
+            netSubscribers: netSubs,
             viewsFormatted: views >= 1_000_000
               ? `${(views / 1_000_000).toFixed(1)}M`
               : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
-            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           };
         })
       })),
@@ -551,7 +623,7 @@ export const useStore = create(
             ...v,
             rpm: r,
             revenue,
-            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           };
         })
       })),
@@ -567,7 +639,7 @@ export const useStore = create(
             views,
             viewsFormatted: views >= 1_000_000 ? `${(views / 1_000_000).toFixed(1)}M` : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
             revenue,
-            revenueFormatted: `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           };
         })
       })),
@@ -575,7 +647,7 @@ export const useStore = create(
       // Apply preset scenarios or import JSON
       crmApplyPreset: (presetKey) => set((state) => {
         const fmt = (n) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
-        const fmtUSD = (n) => `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const fmtINR = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
         if (presetKey === 'viral') {
           const subs = 25000000;
@@ -596,7 +668,7 @@ export const useStore = create(
               watchTimeLast28Days: watchTime,
               watchTimeLast28DaysFormatted: fmt(watchTime),
               revenueLast28Days: revenue,
-              revenueLast28DaysFormatted: fmtUSD(revenue),
+              revenueLast28DaysFormatted: fmtINR(revenue),
             },
             videos: state.videos.map(v => {
               const newViews = v.views * 5;
@@ -608,7 +680,7 @@ export const useStore = create(
                 viewsFormatted: fmt(newViews),
                 rpm: newRpm,
                 revenue: newRev,
-                revenueFormatted: fmtUSD(newRev)
+                revenueFormatted: fmtINR(newRev)
               };
             })
           };
@@ -624,7 +696,7 @@ export const useStore = create(
                 ...v,
                 rpm: newRpm,
                 revenue: newRev,
-                revenueFormatted: fmtUSD(newRev)
+                revenueFormatted: fmtINR(newRev)
               };
             })
           };
@@ -647,6 +719,28 @@ export const useStore = create(
     {
       name: 'yt-studio-analytics-v2',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (state.channelInfo) {
+            if (state.channelInfo.revenueLast28DaysFormatted) {
+              state.channelInfo.revenueLast28DaysFormatted = formatINR(state.channelInfo.revenueLast28DaysFormatted);
+            }
+            if (state.channelInfo.totalRevenueFormatted) {
+              state.channelInfo.totalRevenueFormatted = formatINR(state.channelInfo.totalRevenueFormatted);
+            }
+            state.channelInfo.currency = 'INR';
+          }
+          if (state.videos && Array.isArray(state.videos)) {
+            state.videos = state.videos.map(v => ({
+              ...v,
+              revenueFormatted: formatINR(v.revenueFormatted || v.revenue)
+            }));
+          }
+          if (state.settings) {
+            state.settings.currency = 'INR - Indian Rupee (₹)';
+          }
+        }
+      },
       partialize: (state) => ({
         settings: state.settings,
         spreadsheetConfig: state.spreadsheetConfig,

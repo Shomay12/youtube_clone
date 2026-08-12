@@ -230,7 +230,7 @@
 }
 
 .hover-actions a, .hover-actions button {
-  color: #ffffff;
+  color: var(--icon-color);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -246,13 +246,13 @@
 }
 
 .hover-actions a:hover, .hover-actions button:hover {
-  color: #ffffff;
-  background: #383838;
+  color: var(--text-primary);
+  background: var(--hover-bg);
 }
 
 .hover-actions span {
   font-size: 18px;
-  color: #ffffff;
+  color: var(--icon-color);
 }
 
 .visibility-cell {

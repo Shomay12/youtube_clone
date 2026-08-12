@@ -53,8 +53,8 @@
 .search-box {
   display: flex;
   align-items: center;
-  background-color: #121212;
-  border: 1px solid #303030;
+  background-color: #f8f8f8;
+  border: 1px solid #cccccc;
   border-radius: 40px;
   padding: 4px 16px;
   width: 100%;
@@ -95,10 +95,10 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: 540px;
-  background-color: #282828;
+  background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   z-index: 1100;
   max-height: 420px;
   overflow-y: auto;
@@ -118,7 +118,7 @@
   gap: 12px;
   padding: 10px 16px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .search-result-item:hover {
@@ -204,10 +204,10 @@
   top: 48px;
   right: 0;
   width: 360px;
-  background-color: #282828;
+  background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   z-index: 1200;
 }
 
@@ -239,11 +239,11 @@
   display: flex;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .notification-item.unread {
-  background-color: rgba(62, 166, 255, 0.08);
+  background-color: rgba(6, 95, 212, 0.06);
 }
 
 .notif-icon {
@@ -279,7 +279,7 @@
   gap: 8px;
   background-color: transparent;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   padding: 6px 16px;
   color: var(--text-primary);
   font-weight: 500;
@@ -295,10 +295,10 @@
   top: 48px;
   right: 0;
   width: 240px;
-  background-color: #282828;
+  background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   z-index: 1200;
   padding: 8px 0;
 }
@@ -362,11 +362,11 @@
 
 /* Help Modal */
 .help-modal {
-  background-color: #282828;
+  background-color: #ffffff;
   width: 520px;
   border-radius: 6px;
   padding: 24px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
 
 .help-search {
@@ -383,7 +383,7 @@
 .help-search input {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 14px;
   width: 100%;
   outline: none;
@@ -417,7 +417,7 @@
   align-items: center;
   gap: 8px;
   background-color: var(--accent-blue);
-  color: #000;
+  color: #fff;
   padding: 10px 18px;
   border-radius: 4px;
   font-weight: 500;
@@ -457,7 +457,7 @@
   align-items: center;
   gap: 6px;
   background-color: var(--accent-blue);
-  color: #0f0f0f;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   padding: 6px 14px;
@@ -475,7 +475,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: rgba(62, 166, 255, 0.1);
+  background-color: rgba(6, 95, 212, 0.08);
   color: var(--accent-blue);
   font-size: 13px;
   font-weight: 500;
@@ -487,7 +487,7 @@
 }
 
 .yt-sync-btn:hover:not(:disabled) {
-  background-color: rgba(62, 166, 255, 0.2);
+  background-color: rgba(6, 95, 212, 0.15);
 }
 
 .yt-sync-btn:disabled {

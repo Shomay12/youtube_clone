@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, formatINR } from '../store/useStore';
 import { StudioCheckBadge, StudioUpBadge, StudioDownBadge } from '../components/StudioBadges';
 import './Dashboard.css';
 
@@ -226,7 +226,7 @@ const Dashboard = () => {
               <div className="stat-row">
                 <span className="stat-label">Estimated revenue</span>
                 <span className="stat-value ana-stat-val">
-                  {channelInfo?.revenueLast28DaysFormatted || '$0'}
+                  {formatINR(channelInfo?.revenueLast28DaysFormatted || channelInfo?.revenueLast28Days || 0)}
                   <StudioUpBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>

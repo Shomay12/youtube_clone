@@ -112,7 +112,7 @@
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border-color);
-  color: #fff;
+  color: var(--text-primary);
   padding: 6px 0;
   outline: none;
   font-size: 14px;
@@ -132,7 +132,7 @@
 
 .send-reply-btn {
   background-color: var(--accent-blue);
-  color: #000;
+  color: #ffffff;
   padding: 4px 14px;
   border-radius: 2px;
   font-weight: 600;

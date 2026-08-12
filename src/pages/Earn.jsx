@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStore } from '../store/useStore';
+import { useStore, formatINR } from '../store/useStore';
 import './Earn.css';
 
 const Earn = () => {
@@ -39,7 +39,7 @@ const Earn = () => {
         <div className="hero-right">
           <div className="rev-est-box">
             <p className="rev-label">Estimated 28-day Earnings</p>
-            <p className="rev-value">{channelInfo.revenueLast28DaysFormatted}</p>
+            <p className="rev-value">{formatINR(channelInfo.revenueLast28DaysFormatted || channelInfo.revenueLast28Days || 0)}</p>
           </div>
         </div>
       </div>

@@ -71,7 +71,7 @@ const TopNav = ({ onToggleSidebar }) => {
           </button>
           <div className="logo-container" onClick={() => navigate('/channel/UCqpdVWIzEQUcbf4pAxlneOQ/dashboard')}>
             <img 
-              src="https://www.gstatic.com/youtube/img/creator/yt_studio_logo_white.svg" 
+              src="https://www.gstatic.com/youtube/img/creator/yt_studio_logo.svg" 
               alt="YouTube Studio" 
               className="studio-logo"
             />

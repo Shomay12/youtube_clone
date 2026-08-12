@@ -16,7 +16,7 @@ export const initialChannelInfo = {
   subscribersGainedLast28Days: 742000,
   subscribersGainedLast28DaysFormatted: "+742K",
   revenueLast28Days: 486210,
-  revenueLast28DaysFormatted: "$486,210",
+  revenueLast28DaysFormatted: "₹4,86,210",
   description: "Welcome to TechCraft Studios! We build futuristic software, test ultra-high-end tech, and engineer incredible AI projects.",
   country: "United States",
   customUrl: "https://youtube.com/@techcraft",
@@ -564,11 +564,11 @@ export const initialNotifications = [
   { id: "n1", title: "Milestone Reached! 🎉", message: "Your channel crossed 18.7 Million Subscribers!", time: "2 hours ago", read: false, icon: "military_tech" },
   { id: "n2", title: "Video Outperforming Typical! 🚀", message: "'I Built an AI That Runs My Entire Life' is #1 in recent uploads.", time: "1 day ago", read: false, icon: "trending_up" },
   { id: "n3", title: "New Copyright Match", message: "A 84% match was detected for 'Coding a Full 3D Game Engine'.", time: "3 days ago", read: true, icon: "copyright" },
-  { id: "n4", title: "Monthly Revenue Update", message: "Your estimated earnings for June ($486,210) have been finalized.", time: "5 days ago", read: true, icon: "payments" }
+  { id: "n4", title: "Monthly Revenue Update", message: "Your estimated earnings for June (₹4,86,210) have been finalized.", time: "5 days ago", read: true, icon: "payments" }
 ];
 
 export const initialSettings = {
-  currency: "USD ($)",
+  currency: "INR - Indian Rupee (₹)",
   country: "United States",
   keywords: "tech, coding, software engineering, AI, quantum computing, game dev, desk setup, hardware",
   uploadDefaultVisibility: "Public",

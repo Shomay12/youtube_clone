@@ -58,22 +58,6 @@
 
 .settings-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-}
-
-.reset-demo-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--accent-red);
-  font-weight: 600;
-  font-size: 13px;
-  border: 1px solid var(--accent-red);
-  padding: 6px 12px;
-  border-radius: 2px;
-}
-
-.reset-demo-btn:hover {
-  background-color: rgba(255, 78, 69, 0.15);
 }

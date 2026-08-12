@@ -24,7 +24,7 @@
 
 .back-btn:hover {
   background-color: var(--hover-bg);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .video-header-subtitle {
@@ -51,7 +51,7 @@
 
 .save-btn {
   background-color: var(--accent-blue);
-  color: #000;
+  color: #ffffff;
   padding: 8px 18px;
   border-radius: 2px;
   font-weight: 600;
@@ -59,7 +59,7 @@
 }
 
 .save-btn:disabled {
-  background-color: #3f3f3f;
+  background-color: #e0e0e0;
   color: var(--text-disabled);
   cursor: not-allowed;
 }

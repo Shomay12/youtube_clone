@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, formatINR } from '../store/useStore';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceDot
@@ -63,7 +63,7 @@ const Analytics = () => {
   const searchParams = new URLSearchParams(location.search);
   const videoIdFromQuery = searchParams.get('video') || searchParams.get('v');
   const targetVideoId = id || videoIdFromQuery;
-  const video = targetVideoId ? videos.find(v => v.id === targetVideoId || String(v.id) === String(targetVideoId)) : null;
+  const video = targetVideoId ? videos.find(v => v.id === targetVideoId || String(v.id).toLowerCase() === String(targetVideoId).toLowerCase()) : null;
   const isVideoMode = Boolean(video);
   const currentVideo = video || videos[0] || {};
 
@@ -332,12 +332,12 @@ const Analytics = () => {
     return `${val}`;
   };
 
-  // Custom tooltips for Recharts formatted in USD ($)
+  // Custom tooltips for Recharts formatted in INR (₹)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const val = payload[0].value;
       const formatted = selectedMetric === 'revenue'
-        ? `$${val?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        ? `₹${val?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(1)}K` : val);
       return (
         <div className="yt-chart-tooltip">
@@ -425,7 +425,7 @@ const Analytics = () => {
       return {
         ...v,
         calculatedRevenue,
-        calculatedRevenueFormatted: `$${calculatedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        calculatedRevenueFormatted: `₹${calculatedRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       };
     }).sort((a, b) => b.calculatedRevenue - a.calculatedRevenue);
   }, [videos]);
@@ -595,10 +595,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.revenueFormatted || '$5,849.33'}</span>
+                      <span>{formatINR(aggregated.revenueFormatted || aggregated.revenue || 12510.97)}</span>
                       <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">$615.89 more than usual</div>
+                    <div className="metric-sub-label">₹615.89 more than usual</div>
                   </div>
                 </div>
 
@@ -633,7 +633,7 @@ const Analytics = () => {
                         tickFormatter={formatXAxisDate}
                         ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                       />
-                      <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={(v) => selectedMetric === 'revenue' ? `$${formatYAxisValue(v)}` : formatYAxisValue(v)} />
+                      <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)} />
                       <Tooltip content={<CustomTooltip />} />
                       <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
                       <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={2.5} fill="url(#colorBlue)" />
@@ -760,27 +760,69 @@ const Analytics = () => {
                   <div className="top-content-table-container">
                     <div className="top-content-header-row">
                       <span className="col-content">Content</span>
-                      <span className="col-duration">Average view duration</span>
+                      <span className="col-duration">
+                        Average view<br />duration
+                      </span>
                       <span className="col-views">Views</span>
                     </div>
 
                     <div className="top-content-list">
-                      {videos.slice(0, 7).map((vid, idx) => (
+                      {[
+                        {
+                          id: 'VID001',
+                          title: 'Instagram Viral Motu Patlu Wali Ai Video Kaise Banaye | Trending motu patlu video kaise banaye',
+                          publishDate: 'Jul 22, 2026',
+                          thumbnail: videos[0]?.thumbnail || '/thumbnails/1.webp',
+                          avgViewDuration: '1:44',
+                          retentionPct: '29.2%',
+                          views: 45523,
+                          isRecent: false
+                        },
+                        {
+                          id: 'VID002',
+                          title: 'Long AI Video Kaise Banaye (14 Min) Using Just 1 Prompt🔥|| Ai Automation',
+                          publishDate: 'Aug 7, 2026',
+                          thumbnail: videos[1]?.thumbnail || '/thumbnails/2.webp',
+                          avgViewDuration: '3:06',
+                          retentionPct: '25.2%',
+                          views: 35872,
+                          isRecent: true
+                        },
+                        {
+                          id: 'VID003',
+                          title: 'Create Kids Cartoon Nursery Rhymes with Ai🔥 Ai Video Kaise Banaye | Ai Video Maker',
+                          publishDate: 'Jul 9, 2026',
+                          thumbnail: videos[2]?.thumbnail || '/thumbnails/3.webp',
+                          avgViewDuration: '2:57',
+                          retentionPct: '22.4%',
+                          views: 12064,
+                          isRecent: false
+                        },
+                        {
+                          id: 'VID004',
+                          title: 'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search',
+                          publishDate: 'Jun 6, 2026',
+                          thumbnail: videos[3]?.thumbnail || '/thumbnails/4.webp',
+                          avgViewDuration: '1:50',
+                          retentionPct: '27.0%',
+                          views: 10762,
+                          isRecent: false
+                        }
+                      ].map((vid, idx) => (
                         <div className="top-content-row" key={vid.id || idx}>
                           <span className="row-number">{idx + 1}</span>
                           <img src={vid.thumbnail} alt="" className="row-thumb" />
                           <div className="row-info">
                             <div className="row-title" title={vid.title}>{vid.title}</div>
-                            {idx === 0 ? (
-                              <button className="brainstorm-pill">
-                                <span className="sparkle-icon">✦</span> Brainstorm video ideas
-                              </button>
-                            ) : (
-                              <span className="row-date">{vid.publishDate || vid.date || 'Jul 9, 2026'}</span>
-                            )}
+                            <div className="row-meta-line">
+                              <span className="row-date">{vid.publishDate}</span>
+                              {vid.isRecent && <span className="recent-upload-badge">Recent upload</span>}
+                            </div>
                           </div>
-                          <span className="row-duration">{vid.avgViewDuration || vid.duration || '10:18'} ({vid.ctr ? `${vid.ctr}%` : '29.3%'})</span>
-                          <span className="row-views">{vid.viewsFormatted || vid.views?.toLocaleString()}</span>
+                          <span className="row-duration">
+                            {vid.avgViewDuration} <span className="row-pct">({vid.retentionPct})</span>
+                          </span>
+                          <span className="row-views">{Number(vid.views).toLocaleString('en-IN')}</span>
                         </div>
                       ))}
                     </div>
@@ -1201,11 +1243,11 @@ const Analytics = () => {
                 <div style={{ marginTop: '16px' }}>
                   <div style={{ fontSize: '12px', fontWeight: '500', color: '#aaa', marginBottom: '8px' }}>Key moments for audience retention</div>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                    <button style={{ backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '12px', fontWeight: '500' }}>Intro</button>
-                    <button style={{ backgroundColor: '#272727', color: '#fff', border: '1px solid #383838', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>2 Spikes</button>
-                    <button style={{ backgroundColor: '#272727', color: '#fff', border: '1px solid #383838', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>Dip</button>
+                    <button style={{ backgroundColor: '#0f0f0f', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '12px', fontWeight: '500' }}>Intro</button>
+                    <button style={{ backgroundColor: '#f2f2f2', color: '#0f0f0f', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>2 Spikes</button>
+                    <button style={{ backgroundColor: '#f2f2f2', color: '#0f0f0f', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '4px 12px', fontSize: '12px' }}>Dip</button>
                   </div>
-                  <div style={{ width: '100%', height: '180px', backgroundColor: '#1f1f1f', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '180px', backgroundColor: '#f2f2f2', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img src={currentVideo.thumbnail || '/thumbnails/1.webp'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 </div>
@@ -1847,33 +1889,39 @@ const Analytics = () => {
             <div className="revenue-hero-header">
               <div className="revenue-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
               <div className="revenue-big-val">
-                {aggregated.revenueFormatted} <StudioUpBadge style={{ marginLeft: '6px' }} />
+                {formatINR(aggregated.revenueFormatted || aggregated.revenue || 12532.97)}
               </div>
-              <div className="revenue-subtext">Calculated from (Views / 1000) × RPM</div>
             </div>
 
             <div className="chart-container-wrapper">
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTeal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#00c49f" stopOpacity={0.20} />
+                      <stop offset="95%" stopColor="#00c49f" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    stroke="#717171"
+                    stroke="#888888"
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: '#e5e5e5' }}
                     tickFormatter={formatXAxisDate}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} domain={revenueDomain} tickFormatter={v => `$${formatYAxisValue(v)}`} />
+                  <YAxis
+                    orientation="right"
+                    stroke="#888888"
+                    tickLine={false}
+                    axisLine={false}
+                    domain={[0, 'auto']}
+                    tickFormatter={v => `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
-                  <Area type="monotone" dataKey="revenue" stroke="#14b8a6" strokeWidth={2.5} fill="url(#colorTeal)" />
+                  <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(0, 0, 0, 0.04)" />
+                  <Area type="monotone" dataKey="revenue" stroke="#00c49f" strokeWidth={2} fill="url(#colorTeal)" />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-revenue-${v.id}-${v.date}-${i}`}
@@ -1884,10 +1932,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 8}, ${props.cy - 16})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
-                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                            <rect x="0" y="0" width="16" height="14" rx="2" fill="#606060" />
+                            <polygon points="6,3 12,7 6,11" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -1906,25 +1954,37 @@ const Analytics = () => {
           <div className="studio-two-column margin-top-20">
             {/* Left Column */}
             <div className="revenue-col">
-              {/* How much you're earning */}
+              {/* 1. How much you're earning */}
               <StudioCard title="How much you're earning" subtitle="Estimated · Last 6 months" infoIcon={true}>
                 <div className="earning-months-list">
-                  <div className="earning-row">
-                    <span className="lbl">August (ongoing)</span>
-                    <span className="dot-sep">•</span>
-                    <span className="val">${(aggregated.revenue * 0.02).toFixed(2)}</span>
-                  </div>
-                  <FormatDistributionRow label="July" value={aggregated.revenue * 0.35} formattedValue={`$${(aggregated.revenue * 0.35).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue * 0.4} barColor="#14b8a6" />
-                  <FormatDistributionRow label="June" value={aggregated.revenue * 0.22} formattedValue={`$${(aggregated.revenue * 0.22).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue * 0.4} barColor="#14b8a6" />
-                  <FormatDistributionRow label="May" value={aggregated.revenue * 0.34} formattedValue={`$${(aggregated.revenue * 0.34).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue * 0.4} barColor="#14b8a6" />
-                  <FormatDistributionRow label="April" value={aggregated.revenue * 0.27} formattedValue={`$${(aggregated.revenue * 0.27).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue * 0.4} barColor="#14b8a6" />
-                  <FormatDistributionRow label="March" value={aggregated.revenue * 0.14} formattedValue={`$${(aggregated.revenue * 0.14).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue * 0.4} barColor="#14b8a6" />
+                  {[
+                    { month: 'August (ongoing)', value: 4382.17, max: 12000 },
+                    { month: 'July', value: 11926.91, max: 12000 },
+                    { month: 'June', value: 7417.19, max: 12000 },
+                    { month: 'May', value: 11673.89, max: 12000 },
+                    { month: 'April', value: 9259.07, max: 12000 },
+                    { month: 'March', value: 4707.47, max: 12000 }
+                  ].map((m, idx) => {
+                    const scaledVal = (aggregated.revenue && aggregated.revenue > 0)
+                      ? (m.value / 12532.97) * aggregated.revenue
+                      : m.value;
+                    const pct = Math.min(100, Math.max(5, Math.round((scaledVal / 12500) * 100)));
+                    return (
+                      <div className="earning-row-clean" key={idx}>
+                        <span className="lbl">{m.month}</span>
+                        <div className="earning-bar-track">
+                          <div className="earning-bar-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="val">₹{scaledVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    );
+                  })}
                 </div>
                 <button className="see-more-btn margin-top-16">See more</button>
               </StudioCard>
 
-              {/* How you make money */}
-              <StudioCard title="How you make money" subtitle="Estimated · Last 28 days" infoIcon={true}>
+              {/* 2. How you make money */}
+              <StudioCard title="How you make money" subtitle="Estimated · Last 28 days" infoIcon={true} className="margin-top-20">
                 <div className="card-filter-pills">
                   {['All', 'Videos', 'Shorts', 'Live'].map(m => (
                     <button
@@ -1936,8 +1996,26 @@ const Analytics = () => {
                     </button>
                   ))}
                 </div>
-                <FormatDistributionRow label="Watch Page ads" value={aggregated.revenue * 0.98} formattedValue={`$${(aggregated.revenue * 0.98).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue} barColor="#14b8a6" />
-                <FormatDistributionRow label="Shorts Feed ads" value={aggregated.revenue * 0.02} formattedValue={`$${(aggregated.revenue * 0.02).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} maxVal={aggregated.revenue} barColor="#14b8a6" />
+                <div className="earning-months-list margin-top-16">
+                  <div className="earning-row-clean">
+                    <span className="lbl">Watch Page ads</span>
+                    <div className="earning-bar-track">
+                      <div className="earning-bar-fill" style={{ width: '99%' }} />
+                    </div>
+                    <span className="val">
+                      ₹{((aggregated.revenue ? aggregated.revenue * 0.999 : 12521.49)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="earning-row-clean">
+                    <span className="lbl">Shorts Feed ads</span>
+                    <div className="earning-bar-track">
+                      <div className="earning-bar-fill" style={{ width: '4px', minWidth: '4px' }} />
+                    </div>
+                    <span className="val">
+                      ₹{((aggregated.revenue ? aggregated.revenue * 0.001 : 13.32)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
                 <button className="see-more-btn margin-top-16">See more</button>
               </StudioCard>
             </div>
@@ -1960,16 +2038,18 @@ const Analytics = () => {
 
                 <div className="revenue-performance-summary">
                   <div className="summary-item">
-                    <span className="big-num">{aggregated.revenueFormatted}</span>
+                    <span className="big-num">
+                      ₹{((aggregated.revenue ? aggregated.revenue * 0.88 : 11058.49)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                     <span className="sub-lbl">Estimated revenue</span>
                   </div>
                   <div className="summary-split">
                     <div>
-                      <span className="med-num">{aggregated.viewsFormatted}</span>
+                      <span className="med-num">{aggregated.viewsFormatted || '1L'}</span>
                       <span className="sub-lbl">Views</span>
                     </div>
                     <div>
-                      <span className="med-num">${aggregated.rpm ? aggregated.rpm.toFixed(2) : '33.64'}</span>
+                      <span className="med-num">₹{(aggregated.rpm || 106.82).toFixed(2)}</span>
                       <span className="sub-lbl">Revenue per 1K views (RPM)</span>
                     </div>
                   </div>
@@ -1978,7 +2058,7 @@ const Analytics = () => {
                 <div className="revenue-videos-list">
                   {topEarningVideos.slice(0, 5).map((v) => {
                     const maxRev = topEarningVideos[0]?.calculatedRevenue || 1;
-                    const pctWidth = Math.min(100, Math.max(5, Math.round((v.calculatedRevenue / maxRev) * 100)));
+                    const pctWidth = Math.min(100, Math.max(8, Math.round((v.calculatedRevenue / maxRev) * 100)));
                     return (
                       <div className="rev-video-row" key={v.id}>
                         <img src={v.thumbnail} alt="" className="rev-thumb" />
