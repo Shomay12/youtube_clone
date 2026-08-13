@@ -3,6 +3,29 @@ import { useStore } from '../store/useStore';
 import './CRM.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+const parseSmartNumber = (val, fallback = 0) => {
+  if (typeof val === 'number') return isNaN(val) ? fallback : val;
+  if (!val || typeof val !== 'string') return fallback;
+  const cleaned = val.trim().replace(/,/g, '');
+  if (/^[-+]?[0-9]*\.?[0-9]+[kK]$/i.test(cleaned)) {
+    return parseFloat(cleaned) * 1_000;
+  }
+  if (/^[-+]?[0-9]*\.?[0-9]+[mM]$/i.test(cleaned)) {
+    return parseFloat(cleaned) * 1_000_000;
+  }
+  if (/^[-+]?[0-9]*\.?[0-9]+[bB]$/i.test(cleaned)) {
+    return parseFloat(cleaned) * 1_000_000_000;
+  }
+  if (/^[-+]?[0-9]*\.?[0-9]+[lL]$/i.test(cleaned)) {
+    return parseFloat(cleaned) * 100_000;
+  }
+  if (/^[-+]?[0-9]*\.?[0-9]+[cC][rR]?$/i.test(cleaned)) {
+    return parseFloat(cleaned) * 10_000_000;
+  }
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? fallback : parsed;
+};
+
 const fmt = (n) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M`
   : n >= 1_000   ? `${(n / 1_000).toFixed(2)}K`
@@ -30,21 +53,61 @@ const StatPreview = ({ label, value, color = '#a78bfa' }) => (
   </div>
 );
 
-const CRMInput = ({ label, value, onChange, type = 'number', min, max, step = 1, unit, placeholder }) => (
-  <div className="crm-field">
-    <label className="crm-field-label">{label}{unit && <span className="crm-unit">{unit}</span>}</label>
-    <input
-      className="crm-input"
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
-    />
-  </div>
-);
+const CRMInput = ({ label, value, onChange, type = 'number', min, max, step = 1, unit, placeholder, onKeyDown }) => {
+  const [localVal, setLocalVal] = useState(value !== undefined && value !== null ? String(value) : '');
+  const isFocused = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused.current) {
+      setLocalVal(value !== undefined && value !== null ? String(value) : '');
+    }
+  }, [value]);
+
+  const handleChange = (e) => {
+    const text = e.target.value;
+    setLocalVal(text);
+    if (type === 'number') {
+      if (text.trim() === '' || text === '-') {
+        onChange(0);
+      } else {
+        const num = parseSmartNumber(text, null);
+        if (num !== null) {
+          onChange(num);
+        }
+      }
+    } else {
+      onChange(text);
+    }
+  };
+
+  const handleBlur = () => {
+    isFocused.current = false;
+    if (type === 'number') {
+      const num = parseSmartNumber(localVal, value ?? 0);
+      onChange(num);
+      setLocalVal(String(num));
+    }
+  };
+
+  return (
+    <div className="crm-field">
+      <label className="crm-field-label">{label}{unit && <span className="crm-unit">{unit}</span>}</label>
+      <input
+        className="crm-input"
+        type={type === 'number' ? 'text' : type}
+        placeholder={placeholder}
+        value={localVal}
+        min={min}
+        max={max}
+        step={step}
+        onFocus={() => { isFocused.current = true; }}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        onKeyDown={onKeyDown}
+      />
+    </div>
+  );
+};
 
 // ── Main CRM Component ────────────────────────────────────────────────────────
 export default function CRM() {
@@ -177,6 +240,35 @@ export default function CRM() {
     if (!activeVideo) return;
     updateVideoMetrics(activeVideo.id, selectedVideoDraft);
     showToast(`Video "${activeVideo.title?.slice(0, 24)}…" updated ✓ Reflecting across all Studio pages.`, 'success');
+  }
+
+  // Global Keyboard Shortcuts (Cmd+S / Ctrl+S to save)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (activeSection === 'growth') applyVideoGrowthChanges();
+        else if (activeSection === 'channel') applyChannel();
+        else if (activeSection === 'bulk') applyBulkMultiply();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSection, selectedVideoDraft, channelDraft, bulkFactor, bulkRPM, activeVideo]);
+
+  function autoCalculateEngagement() {
+    const v = Number(selectedVideoDraft.views) || 0;
+    const gained = Math.round(v * 0.014);
+    const lost = Math.round(gained * 0.12);
+    const likes = Math.round(v * 0.046);
+    const comments = Math.round(v * 0.0034);
+    setSelectedVideoDraft(d => ({
+      ...d,
+      subscribersGained: gained,
+      subscribersLost: lost,
+      likes,
+      comments
+    }));
   }
 
   const handleFileUpload = (e) => {
@@ -416,7 +508,31 @@ export default function CRM() {
                     />
                   </div>
 
-                  <div className="crm-grid-2">
+                  <div className="crm-quick-pill-row" style={{ marginTop: 4 }}>
+                    <span className="crm-field-label" style={{ marginBottom: 0 }}>View presets:</span>
+                    {[100000, 500000, 1000000, 2000000, 5000000, 10000000].map(vAmt => (
+                      <button
+                        key={vAmt}
+                        type="button"
+                        className="crm-mini-pill"
+                        onClick={() => {
+                          const gained = Math.round(vAmt * 0.014);
+                          setSelectedVideoDraft(d => ({
+                            ...d,
+                            views: vAmt,
+                            likes: Math.round(vAmt * 0.046),
+                            comments: Math.round(vAmt * 0.0034),
+                            subscribersGained: gained,
+                            subscribersLost: Math.round(gained * 0.12)
+                          }));
+                        }}
+                      >
+                        {vAmt >= 1000000 ? `${vAmt / 1000000}M` : `${vAmt / 1000}K`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
                     <CRMInput
                       label="Likes Count"
                       value={selectedVideoDraft.likes}
@@ -431,6 +547,17 @@ export default function CRM() {
                       min={0}
                       step={10}
                     />
+                  </div>
+
+                  <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', padding: '6px 12px', fontSize: '11px' }}
+                      onClick={autoCalculateEngagement}
+                    >
+                      ⚡ Auto-calculate natural engagement (4.6% likes, 0.34% comments, 1.4% subs)
+                    </button>
                   </div>
 
                   {/* Impact Summary Pill */}
@@ -502,6 +629,10 @@ export default function CRM() {
                 <tbody>
                   {filteredVideos.map(v => {
                     const isEditing = editingId === v.id;
+                    const handleInlineKeyDown = (e) => {
+                      if (e.key === 'Enter') saveEdit(v.id);
+                      else if (e.key === 'Escape') cancelEdit();
+                    };
                     return (
                       <tr key={v.id} className={isEditing ? 'crm-row-editing' : ''}>
                         <td className="crm-vid-title-cell">
@@ -515,24 +646,30 @@ export default function CRM() {
                                 placeholder="Thumb URL"
                                 value={editBuf.thumbnail || ''}
                                 onChange={e => setEditBuf(b => ({ ...b, thumbnail: e.target.value }))}
+                                onKeyDown={handleInlineKeyDown}
                               />
                             )}
                           </div>
                         </td>
                         {isEditing ? (
                           <>
-                            <td><input className="crm-inline-input" type="number" min={0} value={editBuf.subscribersGained}
-                              onChange={e => setEditBuf(b => ({ ...b, subscribersGained: Number(e.target.value) }))} /></td>
-                            <td><input className="crm-inline-input" type="number" min={0} value={editBuf.views}
-                              onChange={e => setEditBuf(b => ({ ...b, views: Number(e.target.value) }))} /></td>
-                            <td><input className="crm-inline-input" type="number" min={0} value={editBuf.likes}
-                              onChange={e => setEditBuf(b => ({ ...b, likes: Number(e.target.value) }))} /></td>
-                            <td><input className="crm-inline-input" type="number" min={0} value={editBuf.comments}
-                              onChange={e => setEditBuf(b => ({ ...b, comments: Number(e.target.value) }))} /></td>
-                            <td><input className="crm-inline-input" type="number" min={0} step={0.01} value={editBuf.rpm}
-                              onChange={e => setEditBuf(b => ({ ...b, rpm: Number(e.target.value) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" value={editBuf.subscribersGained}
+                              onKeyDown={handleInlineKeyDown}
+                              onChange={e => setEditBuf(b => ({ ...b, subscribersGained: parseSmartNumber(e.target.value, b.subscribersGained) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" value={editBuf.views}
+                              onKeyDown={handleInlineKeyDown}
+                              onChange={e => setEditBuf(b => ({ ...b, views: parseSmartNumber(e.target.value, b.views) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" value={editBuf.likes}
+                              onKeyDown={handleInlineKeyDown}
+                              onChange={e => setEditBuf(b => ({ ...b, likes: parseSmartNumber(e.target.value, b.likes) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" value={editBuf.comments}
+                              onKeyDown={handleInlineKeyDown}
+                              onChange={e => setEditBuf(b => ({ ...b, comments: parseSmartNumber(e.target.value, b.comments) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" value={editBuf.rpm}
+                              onKeyDown={handleInlineKeyDown}
+                              onChange={e => setEditBuf(b => ({ ...b, rpm: parseSmartNumber(e.target.value, b.rpm) }))} /></td>
                             <td className="crm-revenue-preview">
-                              {fmtINR((editBuf.views / 1000) * editBuf.rpm)}
+                              {fmtINR(((Number(editBuf.views) || 0) / 1000) * (Number(editBuf.rpm) || 0))}
                             </td>
                             <td className="crm-action-cell">
                               <button className="crm-btn crm-btn-save" onClick={() => saveEdit(v.id)}>Save</button>
@@ -621,9 +758,25 @@ export default function CRM() {
               <StatPreview label="Revenue 28d" value={fmtINR(channelDraft.revenueLast28Days)} color="#fbbf24" />
             </div>
 
-            <button className="crm-apply-btn" onClick={applyChannel}>
-              Apply Changes to YouTube Studio
-            </button>
+            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+              <button className="crm-apply-btn" onClick={applyChannel}>
+                Apply Changes to YouTube Studio
+              </button>
+              <button
+                type="button"
+                className="crm-btn crm-btn-edit"
+                onClick={() => {
+                  setChannelDraft(d => ({
+                    ...d,
+                    viewsLast28Days: totalViews,
+                    revenueLast28Days: parseFloat(totalRevenue.toFixed(2)),
+                    watchTimeLast28Days: Math.round(totalViews * (2.8 / 60))
+                  }));
+                }}
+              >
+                📊 Auto-align with sum of all videos
+              </button>
+            </div>
           </div>
         )}
 
@@ -635,7 +788,20 @@ export default function CRM() {
               <p className="crm-card-desc">Override RPM for every video. Revenue will be recalculated automatically (Revenue = Views / 1000 × RPM).</p>
               <CRMInput label="RPM (₹)" value={bulkRPM}
                 onChange={v => setBulkRPM(v)} min={0} step={0.01} unit="₹" />
-              <div className="crm-preview-small">
+              <div className="crm-quick-pill-row" style={{ marginTop: 6 }}>
+                <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick RPM:</span>
+                {[30, 35, 50, 75, 100, 150].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    className="crm-mini-pill"
+                    onClick={() => setBulkRPM(r)}
+                  >
+                    ₹{r}
+                  </button>
+                ))}
+              </div>
+              <div className="crm-preview-small" style={{ marginTop: 10 }}>
                 Estimated total revenue at this RPM: <strong>{fmtINR((totalViews / 1000) * bulkRPM)}</strong>
               </div>
               <button className="crm-apply-btn" onClick={applyBulkRPM}>
@@ -648,7 +814,20 @@ export default function CRM() {
               <p className="crm-card-desc">Scale every video's views by a factor. Example: 1.5 = +50%, 0.8 = -20%.</p>
               <CRMInput label="Multiplier" value={bulkFactor}
                 onChange={v => setBulkFactor(v)} min={0.01} step={0.05} />
-              <div className="crm-preview-small">
+              <div className="crm-quick-pill-row" style={{ marginTop: 6 }}>
+                <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick multipliers:</span>
+                {[0.8, 1.25, 1.5, 2.0, 5.0, 10.0].map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    className="crm-mini-pill"
+                    onClick={() => setBulkFactor(m)}
+                  >
+                    {m}×
+                  </button>
+                ))}
+              </div>
+              <div className="crm-preview-small" style={{ marginTop: 10 }}>
                 Total views will become: <strong>{fmt(Math.round(totalViews * bulkFactor))}</strong>
                 {' '}(currently {fmt(totalViews)})
               </div>

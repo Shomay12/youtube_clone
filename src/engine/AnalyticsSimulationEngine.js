@@ -264,9 +264,9 @@ export function generateDailyTimeSeries(daysCount = 365) {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const weekendMultiplier = isWeekend ? 1.42 : 1.0;
 
-    // Organic sine fluctuation + pseudo-random noise
+    // Organic sine fluctuation + deterministic harmonic wave (no random flicker on refresh)
     const seasonalFactor = 1 + 0.15 * Math.sin((i / 365) * 2 * Math.PI);
-    const noise = 0.88 + Math.random() * 0.24;
+    const noise = 1.0 + 0.09 * Math.sin(i * 1.618) + 0.04 * Math.cos(i * 3.1415);
 
     // Upload day spikes
     let uploadBoost = 1.0;
@@ -277,19 +277,19 @@ export function generateDailyTimeSeries(daysCount = 365) {
     });
 
     const baseDailyViews = Math.round(52000 * weekendMultiplier * seasonalFactor * noise * uploadBoost);
-    const ctr = parseFloat((7.8 + (Math.random() * 2.4 - 1.2)).toFixed(1));
+    const ctr = parseFloat((7.8 + 0.9 * Math.sin(i * 2.3 + 0.7)).toFixed(1));
     const impressions = Math.round(baseDailyViews / (ctr / 100));
 
-    const avgDurationSecs = Math.round(240 + Math.random() * 50);
+    const avgDurationSecs = Math.round(240 + 25 * Math.cos(i * 1.1 + 0.3));
     const watchTimeHrs = parseFloat((baseDailyViews * (avgDurationSecs / 3600)).toFixed(1));
 
     // Daily RPM around $33.64 average
-    const rpm = parseFloat((33.64 + (Math.random() * 4.0 - 2.0)).toFixed(2));
+    const rpm = parseFloat((33.64 + 1.2 * Math.sin(i * 1.9 + 1.2)).toFixed(2));
     const cpm = parseFloat((rpm * 1.72).toFixed(2));
     const revenue = parseFloat(((baseDailyViews / 1000) * rpm).toFixed(2));
 
-    const subsGained = Math.round(baseDailyViews * 0.012 * (0.9 + Math.random() * 0.2));
-    const subsLost = Math.round(subsGained * (0.10 + Math.random() * 0.04));
+    const subsGained = Math.round(baseDailyViews * 0.012 * (1.0 + 0.08 * Math.sin(i * 2.8)));
+    const subsLost = Math.round(subsGained * (0.12 + 0.02 * Math.cos(i * 1.7)));
     cumulativeSubs += (subsGained - subsLost);
 
     const likes = Math.round(baseDailyViews * 0.044);
@@ -462,11 +462,11 @@ export function getAudienceBreakdown(totalViews) {
 
   // 7 days x 24 hours heatmap data for "When your viewers are on YouTube"
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const viewerHeatmap = days.map(day => {
+  const viewerHeatmap = days.map((day, dayIndex) => {
     const hours = [];
     for (let h = 0; h < 24; h++) {
       let intensity = 0; // 0 = very few, 3 = many
-      if (h >= 14 && h <= 22) intensity = Math.min(3, Math.floor(1 + Math.random() * 3));
+      if (h >= 14 && h <= 22) intensity = ((h + (dayIndex * 3)) % 3) + 1;
       else if (h >= 9 && h <= 13) intensity = 1;
       hours.push({ hour: h, intensity });
     }
@@ -487,20 +487,20 @@ export function getAudienceBreakdown(totalViews) {
  */
 export function generateRealtimeDataset() {
   const last60Minutes = [];
-  const now = new Date();
+  const now = new Date('2026-08-04T12:00:00Z');
 
   for (let i = 59; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 60 * 1000);
-    const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-    const baseViews = Math.round(35 + Math.sin(i / 10) * 12 + Math.random() * 15);
+    const timeStr = `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+    const baseViews = Math.round(35 + Math.sin(i / 10) * 12 + ((i * 7) % 15));
     last60Minutes.push({ minute: timeStr, views: baseViews });
   }
 
   const last48Hours = [];
   for (let i = 47; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 3600 * 1000);
-    const label = `${d.getHours()}:00`;
-    const hourViews = Math.round(1850 + Math.sin(i / 4) * 600 + Math.random() * 250);
+    const label = `${d.getUTCHours()}:00`;
+    const hourViews = Math.round(1850 + Math.sin(i / 4) * 600 + ((i * 37) % 250));
     last48Hours.push({ hour: label, views: hourViews });
   }
 
@@ -526,14 +526,14 @@ export function tickRealtimeData(currentRealtime) {
   
   // Natural fluctuation on latest minute
   const lastItem = new60[new60.length - 1];
-  const delta = Math.floor(Math.random() * 7 - 3);
+  const delta = ((now.getSeconds() % 7) - 3);
   const updatedViews = Math.max(12, lastItem.views + delta);
 
   if (lastItem.minute === timeStr) {
     new60[new60.length - 1] = { ...lastItem, views: updatedViews };
   } else {
     new60.shift();
-    new60.push({ minute: timeStr, views: Math.round(30 + Math.random() * 20) });
+    new60.push({ minute: timeStr, views: Math.round(30 + ((now.getMinutes() * 7) % 20)) });
   }
 
   const new48 = [...currentRealtime.last48Hours];

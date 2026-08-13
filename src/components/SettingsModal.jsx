@@ -152,7 +152,7 @@ const SettingsModal = ({ onClose }) => {
                   <label>Currency</label>
                   <select 
                     className="form-select" 
-                    value={formData.currency || 'INR - Indian Rupee'}
+                    value={(formData.currency && CURRENCIES.includes(formData.currency)) ? formData.currency : 'INR - Indian Rupee'}
                     onChange={(e) => setFormData({...formData, currency: e.target.value})}
                   >
                     {CURRENCIES.map((curr) => (

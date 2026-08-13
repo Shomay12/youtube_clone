@@ -1,6 +1,4 @@
-import React, { useEffect } from 'react';
-import { useStore } from '../store/useStore';
-import './Toast.css';
+import React from 'react';
 
 const Toast = () => {
   return null;

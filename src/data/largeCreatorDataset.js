@@ -226,7 +226,7 @@ export const initialVideos = [
 
 // Additional mock videos to reach 40+ items
 for (let i = 9; i <= 42; i++) {
-  const views = Math.floor(Math.random() * 45000000) + 1500000;
+  const views = 1500000 + ((i * 1371947) % 43500000);
   initialVideos.push({
     id: `v1${i < 10 ? '0' + i : i}`,
     title: `Tech Masterclass #${i}: Advanced Systems & AI Engineering`,
@@ -239,7 +239,7 @@ for (let i = 9; i <= 42; i++) {
     viewsFormatted: (views / 1000000).toFixed(1) + "M",
     comments: Math.floor(views / 1000),
     likes: Math.floor(views / 12),
-    duration: `${Math.floor(Math.random() * 20) + 8}:${Math.floor(Math.random() * 50) + 10}`,
+    duration: `${8 + (i % 12)}:${10 + ((i * 7) % 50)}`,
     type: "video",
     playlist: i % 2 === 0 ? "Software Engineering" : "AI Experiments",
     audience: "Not made for kids",
@@ -297,7 +297,7 @@ export const initialShorts = [
 
 // Add 17 more shorts to reach 20 Shorts
 for (let i = 4; i <= 20; i++) {
-  const views = Math.floor(Math.random() * 80000000) + 5000000;
+  const views = 5000000 + ((i * 2781943) % 75000000);
   initialShorts.push({
     id: `s2${i < 10 ? '0' + i : i}`,
     title: `Developer Tip #${i}: Writing 10x Cleaner Functions 💻 #shorts`,

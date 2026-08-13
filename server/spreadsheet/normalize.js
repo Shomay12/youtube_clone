@@ -145,8 +145,8 @@ function parseDailyAnalyticsSheet(rows) {
 function parseCommentsSheet(rows, videos) {
   const videoMap = Object.fromEntries(videos.map(v => [v.id, v.title]));
 
-  return rows.map((row) => ({
-    id: String(row['Comment ID'] || row['ID'] || `c_${Math.random().toString(36).slice(2)}`),
+  return rows.map((row, index) => ({
+    id: String(row['Comment ID'] || row['ID'] || `c_${index + 1}`),
     videoId: String(row['Video ID'] || ''),
     author: row['Username'] || row['Author'] || '',
     authorAvatar: row['Avatar URL'] || row['Avatar'] || '',
@@ -423,7 +423,7 @@ export function normalizeSpreadsheetData(rawSheets) {
     subscribers = comments.slice(0, 5).map((c, i) => ({
       name: c.author,
       avatar: c.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.author)}&background=random`,
-      subscribers: Math.floor(Math.random() * 500000) + 1000,
+      subscribers: 1000 + ((i * 98765) % 499000),
       date: c.time || '2026-07-28'
     }));
   }

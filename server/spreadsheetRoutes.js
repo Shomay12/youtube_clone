@@ -1,7 +1,37 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { spreadsheetService } from './spreadsheet/index.js';
 import { normalizeForVideo } from './spreadsheet/normalize.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CRM_STORE_FILE = path.resolve(__dirname, 'crm_store.json');
+
 export function registerSpreadsheetRoutes(app) {
+  // Permanent CRM Storage endpoints
+  app.get('/api/crm/data', (req, res) => {
+    try {
+      if (fs.existsSync(CRM_STORE_FILE)) {
+        const data = JSON.parse(fs.readFileSync(CRM_STORE_FILE, 'utf8'));
+        return res.json({ success: true, data });
+      }
+      return res.json({ success: true, data: null });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/crm/save', (req, res) => {
+    try {
+      const payload = req.body || {};
+      fs.writeFileSync(CRM_STORE_FILE, JSON.stringify(payload, null, 2), 'utf8');
+      res.json({ success: true, savedAt: new Date().toISOString() });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get('/api/spreadsheet/status', (req, res) => {
     res.json(spreadsheetService.getStatus());
   });

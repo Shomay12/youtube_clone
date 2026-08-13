@@ -33,7 +33,7 @@
 
 .settings-nav-item:hover {
   background-color: var(--hover-bg);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .settings-nav-item.active {
@@ -41,6 +41,10 @@
   color: var(--accent-blue);
   border-left: 3px solid var(--accent-blue);
   font-weight: 500;
+}
+
+.settings-nav-item.active:hover {
+  color: var(--accent-blue);
 }
 
 .settings-tab-content {

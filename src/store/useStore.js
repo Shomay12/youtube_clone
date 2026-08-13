@@ -31,9 +31,36 @@ export const formatINR = (val) => {
   return String(val);
 };
 
+export const fmtV = (n) => {
+  const num = Number(n) || 0;
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(Math.round(num));
+};
+
+export const fmtW = (n) => {
+  const num = Number(n) || 0;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M hrs`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K hrs`;
+  return `${Math.round(num)} hrs`;
+};
+
+export const fmtS = (s) => {
+  const num = Number(s) || 0;
+  const prefix = num > 0 ? '+' : '';
+  if (Math.abs(num) >= 1_000_000) return `${prefix}${(num / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(num) >= 1_000) return `${prefix}${(num / 1_000).toFixed(1)}K`;
+  return `${prefix}${num.toLocaleString('en-IN')}`;
+};
+
 const INITIAL_REALTIME = generateRealtimeDataset();
 const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-07', '2026-08-04');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
+
+// Baseline lifetime totals from the original simulation data
+const BASELINE_VIEWS = PROCESSED_VIDEOS.reduce((acc, v) => acc + (Number(v.views) || 0), 0) || 21450000;
+const BASELINE_REVENUE = PROCESSED_VIDEOS.reduce((acc, v) => acc + ((Number(v.views) || 0) / 1000 * (Number(v.rpm) || 33.64)), 0) || 722000;
 
 const EMPTY_STATE = {
   channelInfo: {
@@ -81,7 +108,7 @@ const EMPTY_STATE = {
   ],
   spreadsheetWarnings: [],
   settings: {
-    currency: 'INR - Indian Rupee (₹)',
+    currency: 'INR - Indian Rupee',
     theme: 'Dark',
     country: 'United States',
     keywords: 'AI, Autonomous Agents, Software Engineering, React, Node.js, System Design',
@@ -253,13 +280,16 @@ export const useStore = create(
         const filteredDaily = filterDailyMetricsByRange(DAILY_SERIES, startStr, endStr);
         const agg = aggregateMetrics(filteredDaily, videoId);
 
-        // Adjust for individual video proportional share if videoId is specified
+        // Per-video analytics: use the video's actual stored metrics directly
         if (videoId) {
           const targetVideo = state.videos.find(v => v.id === videoId || String(v.id) === String(videoId)) || state.videos[0];
-          const videoShare = targetVideo ? (targetVideo.views / 21450000) : 0.1;
-          const videoViews = Math.round(agg.views * videoShare * 3.5);
-          const videoRevenue = parseFloat(((videoViews / 1000) * (targetVideo?.rpm || 33.64)).toFixed(2));
-          const videoWatchTime = parseFloat((videoViews * (targetVideo?.avgViewDurationSecs || 240) / 3600).toFixed(1));
+          const videoViews = targetVideo ? (Number(targetVideo.views) || 0) : 0;
+          const videoRpm = targetVideo?.rpm ? Number(targetVideo.rpm) : 33.64;
+          const videoRevenue = targetVideo
+            ? (targetVideo.revenue != null ? Number(targetVideo.revenue) : parseFloat(((videoViews / 1000) * videoRpm).toFixed(2)))
+            : 0;
+          const videoAvgDurationSecs = targetVideo?.avgViewDurationSecs || 105;
+          const videoWatchTime = parseFloat((videoViews * videoAvgDurationSecs / 3600).toFixed(1));
 
           const videoSubsGained = targetVideo?.subscribersGained !== undefined 
             ? Number(targetVideo.subscribersGained) 
@@ -271,15 +301,16 @@ export const useStore = create(
             ? Number(targetVideo.netSubscribers)
             : (videoSubsGained - videoSubsLost);
 
-          const fmtSubs = (s) => s >= 1_000_000 ? `+${(s / 1_000_000).toFixed(1)}M` : s >= 1_000 ? `+${(s / 1_000).toFixed(1)}K` : s >= 0 ? `+${s.toLocaleString()}` : `${s.toLocaleString()}`;
+          const videoCtr = targetVideo?.ctr ? Number(targetVideo.ctr) : 8.9;
+          const videoImpressions = Math.round(videoViews * (100 / (videoCtr || 8.9)));
 
           const totalViewsInDaily = filteredDaily.reduce((acc, d) => acc + (d.views || 0), 0) || 1;
 
           const scaledDaily = filteredDaily.map(d => {
             const dayWeight = (d.views || 0) / totalViewsInDaily;
             const dViews = Math.round(videoViews * dayWeight);
-            const dRev = parseFloat(((dViews / 1000) * (targetVideo?.rpm || 33.64)).toFixed(2));
-            const dWatch = parseFloat((dViews * (targetVideo?.avgViewDurationSecs || 240) / 3600).toFixed(1));
+            const dRev = parseFloat(((dViews / 1000) * videoRpm).toFixed(2));
+            const dWatch = parseFloat((dViews * videoAvgDurationSecs / 3600).toFixed(1));
             const dSubsNet = Math.round(videoSubsNet * dayWeight);
             const dSubsGained = Math.round(videoSubsGained * dayWeight);
             const dSubsLost = Math.round(videoSubsLost * dayWeight);
@@ -291,7 +322,9 @@ export const useStore = create(
               watchTimeHrs: dWatch,
               subscribersNet: dSubsNet,
               subscribersGained: dSubsGained,
-              subscribersLost: dSubsLost
+              subscribersLost: dSubsLost,
+              impressions: Math.round(videoImpressions * dayWeight),
+              ctr: videoCtr,
             };
           });
 
@@ -301,60 +334,97 @@ export const useStore = create(
             aggregated: {
               ...agg,
               views: videoViews,
-              viewsFormatted: videoViews >= 1000000 ? `${(videoViews / 1000000).toFixed(1)}M` : `${(videoViews / 1000).toFixed(0)}K`,
+              viewsFormatted: fmtV(videoViews),
               watchTimeHrs: videoWatchTime,
-              watchTimeHrsFormatted: `${videoWatchTime.toLocaleString()}`,
+              watchTimeHrsFormatted: fmtW(videoWatchTime),
               revenue: videoRevenue,
-              revenueFormatted: `₹${videoRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              revenueFormatted: formatINR(videoRevenue),
               subscribersNet: videoSubsNet,
               subscribersGained: videoSubsGained,
               subscribersLost: videoSubsLost,
-              subscribersNetFormatted: fmtSubs(videoSubsNet),
-              rpm: targetVideo?.rpm || 33.64,
-              cpm: targetVideo?.cpm || 58.00,
-              ctr: targetVideo?.ctr || 8.5
+              subscribersNetFormatted: fmtS(videoSubsNet),
+              impressions: videoImpressions,
+              impressionsFormatted: fmtV(videoImpressions),
+              rpm: videoRpm,
+              cpm: targetVideo?.cpm ? Number(targetVideo.cpm) : 58.00,
+              ctr: videoCtr
             },
             trafficSources: getTrafficSources(videoViews),
             audience: getAudienceBreakdown(videoViews)
           };
         }
 
-        if (state.hasCrmOverrides && state.channelInfo) {
-          const crmViews = state.channelInfo.viewsLast28Days || agg.views;
-          const crmWatch = state.channelInfo.watchTimeLast28Days || agg.watchTimeHrs;
-          const crmRev = state.channelInfo.revenueLast28Days || agg.revenue;
-          const crmSubs = state.channelInfo.subscribersGainedLast28Days || agg.subscribersNet;
+        // ── Channel analytics: always derive from actual video store data ──
+        // Scale factor = ratio of current video totals to the original baseline.
+        // This means ANY CRM change (per-video, bulk multiply, RPM) immediately
+        // cascades into metric cards and the daily chart.
+        const storeVideos = state.videos || [];
+        const currentTotalViews = storeVideos.reduce((acc, v) => acc + (Number(v.views) || 0), 0);
+        // Scale factor: how much the current video total differs from baseline
+        const viewsScale = (BASELINE_VIEWS > 0 && currentTotalViews > 0)
+          ? currentTotalViews / BASELINE_VIEWS
+          : 1;
+        const currentTotalRevenue = storeVideos.reduce((acc, v) => acc + ((Number(v.views) || 0) / 1000 * (Number(v.rpm) || 33.64)), 0);
+        const revenueScaleFactor = (BASELINE_REVENUE > 0 && currentTotalRevenue > 0)
+          ? currentTotalRevenue / BASELINE_REVENUE
+          : viewsScale;
 
-          const mergedAgg = {
-            ...agg,
-            views: crmViews,
-            viewsFormatted: state.channelInfo.viewsLast28DaysFormatted || agg.viewsFormatted,
-            watchTimeHrs: crmWatch,
-            watchTimeHrsFormatted: state.channelInfo.watchTimeLast28DaysFormatted || agg.watchTimeHrsFormatted,
-            revenue: crmRev,
-            revenueFormatted: formatINR(state.channelInfo.revenueLast28DaysFormatted || crmRev || agg.revenueFormatted),
-            subscribersNet: crmSubs,
-            subscribersNetFormatted: state.channelInfo.subscribersGainedLast28DaysFormatted || agg.subscribersNetFormatted,
-          };
+        // Apply scale to the simulation's date-range aggregates
+        const scaledViews   = Math.round(agg.views   * viewsScale);
+        const scaledRevenue = parseFloat((agg.revenue * revenueScaleFactor).toFixed(2));
+        const scaledWatch   = parseFloat((agg.watchTimeHrs * viewsScale).toFixed(1));
+        const scaledSubsGained = storeVideos.reduce((acc, v) => acc + (Number(v.subscribersGained) || 0), 0) || Math.round(agg.subscribersNet * viewsScale);
+        const scaledSubsLost   = storeVideos.reduce((acc, v) => acc + (Number(v.subscribersLost) || 0), 0);
+        const scaledSubsNet    = scaledSubsGained - scaledSubsLost;
 
+        // channelInfo explicit values (set via Channel Metrics CRM tab) take priority if set
+        const ci = state.channelInfo || {};
+        const isExplicitChannel = Boolean(ci.hasExplicitChannelMetrics);
+        const finalViews   = (isExplicitChannel && ci.viewsLast28Days > 0) ? Math.round(ci.viewsLast28Days * (agg.views / (INITIAL_AGG.views || 1))) : scaledViews;
+        const finalRevenue = (isExplicitChannel && ci.revenueLast28Days > 0) ? parseFloat((ci.revenueLast28Days * (agg.revenue / (INITIAL_AGG.revenue || 1))).toFixed(2)) : scaledRevenue;
+        const finalWatch   = (isExplicitChannel && ci.watchTimeLast28Days > 0) ? parseFloat((ci.watchTimeLast28Days * (agg.watchTimeHrs / (INITIAL_AGG.watchTimeHrs || 1))).toFixed(1)) : scaledWatch;
+        const finalSubsNet = (isExplicitChannel && ci.subscribersGainedLast28Days !== undefined)
+          ? ci.subscribersGainedLast28Days : scaledSubsNet;
+        const finalImpressions = Math.round(finalViews * 11.2);
+
+        // Scale daily chart proportionally so chart shape is preserved
+        const simDailyTotal = filteredDaily.reduce((acc, d) => acc + (d.views || 0), 0) || 1;
+        const scaledDaily = filteredDaily.map(d => {
+          const w = (d.views || 0) / simDailyTotal;
           return {
-            dateRangeLabel: `${startStr} – ${endStr}`,
-            daily: filteredDaily,
-            aggregated: mergedAgg,
-            trafficSources: getTrafficSources(crmViews),
-            audience: getAudienceBreakdown(crmViews)
+            ...d,
+            views:          Math.round(finalViews   * w),
+            revenue:        parseFloat((finalRevenue * w).toFixed(2)),
+            watchTimeHrs:   parseFloat((finalWatch   * w).toFixed(1)),
+            subscribersNet: Math.round(finalSubsNet  * w),
+            impressions:    Math.round(finalImpressions * w),
+            ctr:            agg.ctr || 8.9,
           };
-        }
+        });
 
         return {
           dateRangeLabel: `${startStr} – ${endStr}`,
-          daily: filteredDaily,
+          daily: scaledDaily,
           aggregated: {
             ...agg,
-            revenueFormatted: formatINR(agg.revenueFormatted || agg.revenue)
+            views:                   finalViews,
+            viewsFormatted:          fmtV(finalViews),
+            watchTimeHrs:            finalWatch,
+            watchTimeHrsFormatted:   fmtW(finalWatch),
+            revenue:                 finalRevenue,
+            revenueFormatted:        formatINR(finalRevenue),
+            subscribersNet:          finalSubsNet,
+            subscribersNetFormatted: fmtS(finalSubsNet),
+            subscribersGained:       scaledSubsGained,
+            subscribersLost:         scaledSubsLost,
+            impressions:             finalImpressions,
+            impressionsFormatted:    fmtV(finalImpressions),
+            ctr:                     agg.ctr || 8.9,
+            rpm:                     finalViews > 0 ? parseFloat(((finalRevenue / finalViews) * 1000).toFixed(2)) : (agg.rpm || 33.64),
+            cpm:                     agg.cpm || 58.00,
           },
-          trafficSources: getTrafficSources(agg.views),
-          audience: getAudienceBreakdown(agg.views)
+          trafficSources: getTrafficSources(finalViews),
+          audience:       getAudienceBreakdown(finalViews),
         };
       },
 
@@ -377,6 +447,7 @@ export const useStore = create(
             // Preserve active CRM data overrides if present
             channelInfo: hasCrm ? currentStore.channelInfo : parsedData.channelInfo,
             videos: hasCrm ? currentStore.videos : parsedData.videos,
+            hasCrmOverrides: hasCrm,
             mode: 'spreadsheet',
             isSpreadsheetLoading: false,
             lastSpreadsheetSync: status.lastLoadedAt || new Date().toISOString(),
@@ -547,9 +618,8 @@ export const useStore = create(
 
       // ─── CRM Actions ───────────────────────────────────────────────────
       // Update a single video's numeric metrics, subscriber gain & thumbnail
-      updateVideoMetrics: (id, updates) => set((state) => ({
-        hasCrmOverrides: true,
-        videos: state.videos.map(v => {
+      updateVideoMetrics: (id, updates) => set((state) => {
+        const updatedVideos = state.videos.map(v => {
           if (String(v.id) !== String(id)) return v;
           const merged = { ...v, ...updates };
           const rpm = Number(updates.rpm !== undefined ? updates.rpm : (v.rpm ?? 33.64));
@@ -573,13 +643,35 @@ export const useStore = create(
             subscribersGained: subsGained,
             subscribersLost: subsLost,
             netSubscribers: netSubs,
-            viewsFormatted: views >= 1_000_000
-              ? `${(views / 1_000_000).toFixed(1)}M`
-              : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
-            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            viewsFormatted: fmtV(views),
+            revenueFormatted: formatINR(revenue)
           };
-        })
-      })),
+        });
+
+        const totalViews = updatedVideos.reduce((acc, v) => acc + (Number(v.views) || 0), 0);
+        const totalRevenue = updatedVideos.reduce((acc, v) => acc + ((Number(v.views) || 0) / 1000 * (Number(v.rpm) || 33.64)), 0);
+        const scale = (BASELINE_VIEWS > 0 && totalViews > 0) ? totalViews / BASELINE_VIEWS : 1;
+        const totalWatch = (INITIAL_AGG.watchTimeHrs || 1383.8) * scale;
+        const totalSubsGained = updatedVideos.reduce((acc, v) => acc + (Number(v.subscribersGained) || 0), 0);
+        const totalSubsLost = updatedVideos.reduce((acc, v) => acc + (Number(v.subscribersLost) || 0), 0);
+        const netSubs = totalSubsGained - totalSubsLost;
+
+        return {
+          hasCrmOverrides: true,
+          videos: updatedVideos,
+          channelInfo: {
+            ...state.channelInfo,
+            viewsLast28Days: Math.round(INITIAL_AGG.views * scale),
+            viewsLast28DaysFormatted: fmtV(INITIAL_AGG.views * scale),
+            revenueLast28Days: parseFloat(((INITIAL_AGG.revenue || 567842) * (totalRevenue / (BASELINE_REVENUE || 1))).toFixed(2)),
+            revenueLast28DaysFormatted: formatINR((INITIAL_AGG.revenue || 567842) * (totalRevenue / (BASELINE_REVENUE || 1))),
+            watchTimeLast28Days: parseFloat(totalWatch.toFixed(1)),
+            watchTimeLast28DaysFormatted: fmtW(totalWatch),
+            subscribersGainedLast28Days: netSubs,
+            subscribersGainedLast28DaysFormatted: fmtS(netSubs)
+          }
+        };
+      }),
 
       // Update channel-level CRM metrics (subscribers, views, revenue, RPM …)
       crmUpdateChannelMetrics: (updates) => set((state) => {
@@ -589,60 +681,82 @@ export const useStore = create(
         const watchTime28 = updates.watchTimeLast28Days !== undefined ? Number(updates.watchTimeLast28Days) : (state.channelInfo.watchTimeLast28Days || 0);
         const revenue28 = updates.revenueLast28Days !== undefined ? Number(updates.revenueLast28Days) : (state.channelInfo.revenueLast28Days || 0);
 
-        const fmtSubs = (n) => n.toLocaleString('en-IN');
-        const fmtViews = (n) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 100_000 ? `${(n / 100_000).toFixed(1)}L` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
-        const fmtWatch = (n) => n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`;
-        const fmtRev = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
         return {
           hasCrmOverrides: true,
           channelInfo: {
             ...state.channelInfo,
             ...updates,
+            hasExplicitChannelMetrics: true,
             subscribers: subs,
-            subscribersFormatted: fmtSubs(subs),
+            subscribersFormatted: subs ? subs.toLocaleString('en-IN') : '0',
             subscribersGainedLast28Days: subsGained,
-            subscribersGainedLast28DaysFormatted: `${subsGained > 0 ? '+' : ''}${subsGained}`,
+            subscribersGainedLast28DaysFormatted: fmtS(subsGained),
             viewsLast28Days: views28,
-            viewsLast28DaysFormatted: fmtViews(views28),
+            viewsLast28DaysFormatted: fmtV(views28),
             watchTimeLast28Days: watchTime28,
-            watchTimeLast28DaysFormatted: fmtWatch(watchTime28),
+            watchTimeLast28DaysFormatted: fmtW(watchTime28),
             revenueLast28Days: revenue28,
-            revenueLast28DaysFormatted: fmtRev(revenue28)
+            revenueLast28DaysFormatted: formatINR(revenue28)
           }
         };
       }),
 
       // Set a single RPM across all videos and recalculate revenues
-      bulkSetVideoRPM: (rpm) => set((state) => ({
-        hasCrmOverrides: true,
-        videos: state.videos.map(v => {
-          const r = Number(rpm);
-          const revenue = (v.views / 1000) * r;
+      bulkSetVideoRPM: (rpm) => set((state) => {
+        const r = Number(rpm);
+        const updatedVideos = state.videos.map(v => {
+          const views = Number(v.views) || 0;
+          const revenue = (views / 1000) * r;
           return {
             ...v,
             rpm: r,
             revenue,
-            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            revenueFormatted: formatINR(revenue)
           };
-        })
-      })),
+        });
+        const totalViews = updatedVideos.reduce((acc, v) => acc + (Number(v.views) || 0), 0);
+        const totalRevenue = updatedVideos.reduce((acc, v) => acc + ((Number(v.views) || 0) / 1000 * r), 0);
+        return {
+          hasCrmOverrides: true,
+          videos: updatedVideos,
+          channelInfo: {
+            ...state.channelInfo,
+            revenueLast28Days: parseFloat(((INITIAL_AGG.revenue || 567842) * (totalRevenue / (BASELINE_REVENUE || 1))).toFixed(2)),
+            revenueLast28DaysFormatted: formatINR((INITIAL_AGG.revenue || 567842) * (totalRevenue / (BASELINE_REVENUE || 1)))
+          }
+        };
+      }),
 
       // Multiply all video views by a factor (e.g. 1.2 = +20%)
-      bulkMultiplyViews: (factor) => set((state) => ({
-        hasCrmOverrides: true,
-        videos: state.videos.map(v => {
-          const views = Math.round(v.views * factor);
-          const revenue = (views / 1000) * (v.rpm || 33.64);
+      bulkMultiplyViews: (factor) => set((state) => {
+        const f = Number(factor) || 1;
+        const updatedVideos = state.videos.map(v => {
+          const views = Math.round((Number(v.views) || 0) * f);
+          const rpm = Number(v.rpm) || 33.64;
+          const revenue = (views / 1000) * rpm;
           return {
             ...v,
             views,
-            viewsFormatted: views >= 1_000_000 ? `${(views / 1_000_000).toFixed(1)}M` : views >= 1_000 ? `${(views / 1_000).toFixed(1)}K` : String(views),
+            viewsFormatted: fmtV(views),
             revenue,
-            revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            revenueFormatted: formatINR(revenue)
           };
-        })
-      })),
+        });
+        const totalViews = updatedVideos.reduce((acc, v) => acc + (Number(v.views) || 0), 0);
+        const scale = (BASELINE_VIEWS > 0 && totalViews > 0) ? totalViews / BASELINE_VIEWS : 1;
+        const totalWatch = (INITIAL_AGG.watchTimeHrs || 1383.8) * scale;
+        return {
+          hasCrmOverrides: true,
+          videos: updatedVideos,
+          channelInfo: {
+            ...state.channelInfo,
+            viewsLast28Days: Math.round(INITIAL_AGG.views * scale),
+            viewsLast28DaysFormatted: fmtV(INITIAL_AGG.views * scale),
+            watchTimeLast28Days: parseFloat(totalWatch.toFixed(1)),
+            watchTimeLast28DaysFormatted: fmtW(totalWatch)
+          }
+        };
+      }),
 
       // Apply preset scenarios or import JSON
       crmApplyPreset: (presetKey) => set((state) => {
@@ -737,7 +851,7 @@ export const useStore = create(
             }));
           }
           if (state.settings) {
-            state.settings.currency = 'INR - Indian Rupee (₹)';
+            state.settings.currency = 'INR - Indian Rupee';
           }
         }
       },

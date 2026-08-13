@@ -68,8 +68,6 @@ function AppContent() {
         </main>
       </div>
 
-      <Toast />
-
       {showSettingsModal && (
         <SettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
