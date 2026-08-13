@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService';
 import './CRM.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -116,6 +117,7 @@ export default function CRM() {
     crmUpdateChannelMetrics, updateVideoMetrics,
     bulkSetVideoRPM, bulkMultiplyViews,
     crmApplyPreset, reloadFromSpreadsheet,
+    loadFromDatabase, isDatabaseLoading, isDatabaseConnected, lastDatabaseSync,
     showToast
   } = useStore();
 
@@ -136,30 +138,32 @@ export default function CRM() {
     likes: videos[0]?.likes || 98000,
     comments: videos[0]?.comments || 7240,
     rpm: videos[0]?.rpm || 33.64,
+    avgViewDuration: videos[0]?.avgViewDuration || '1:45',
+    avgViewDurationSecs: videos[0]?.avgViewDurationSecs || 105,
     title: videos[0]?.title || ''
   });
 
   const fileInputRef = useRef(null);
 
   const [channelDraft, setChannelDraft] = useState({
-    subscribers: channelInfo?.subscribers ?? 406597,
-    subscribersGainedLast28Days: channelInfo?.subscribersGainedLast28Days ?? -242,
-    viewsLast28Days: channelInfo?.viewsLast28Days ?? 130000,
-    watchTimeLast28Days: channelInfo?.watchTimeLast28Days ?? 4300,
-    revenueLast28Days: channelInfo?.revenueLast28Days ?? 11337.11,
-    name: channelInfo?.name || 'Talk Money With Pavan',
+    subscribers: channelInfo?.subscribers ?? 412850,
+    subscribersGainedLast28Days: channelInfo?.subscribersGainedLast28Days ?? 214,
+    viewsLast28Days: channelInfo?.viewsLast28Days ?? 1250000,
+    watchTimeLast28Days: channelInfo?.watchTimeLast28Days ?? 1383.8,
+    revenueLast28Days: channelInfo?.revenueLast28Days ?? 42050.00,
+    name: channelInfo?.name || 'Kids Toon',
     avatar: channelInfo?.avatar || '',
   });
 
   useEffect(() => {
     if (channelInfo) {
       setChannelDraft({
-        subscribers: channelInfo.subscribers ?? 406597,
-        subscribersGainedLast28Days: channelInfo.subscribersGainedLast28Days ?? -242,
-        viewsLast28Days: channelInfo.viewsLast28Days ?? 130000,
-        watchTimeLast28Days: channelInfo.watchTimeLast28Days ?? 4300,
-        revenueLast28Days: channelInfo.revenueLast28Days ?? 11337.11,
-        name: channelInfo.name || 'Talk Money With Pavan',
+        subscribers: channelInfo.subscribers ?? 412850,
+        subscribersGainedLast28Days: channelInfo.subscribersGainedLast28Days ?? 214,
+        viewsLast28Days: channelInfo.viewsLast28Days ?? 1250000,
+        watchTimeLast28Days: channelInfo.watchTimeLast28Days ?? 1383.8,
+        revenueLast28Days: channelInfo.revenueLast28Days ?? 42050.00,
+        name: channelInfo.name || 'Kids Toon',
         avatar: channelInfo.avatar || '',
       });
     }
@@ -172,6 +176,8 @@ export default function CRM() {
 
   useEffect(() => {
     if (activeVideo) {
+      const avdSecs = activeVideo.avgViewDurationSecs || parseAvdToSeconds(activeVideo.avgViewDuration, 105);
+      const avdStr = activeVideo.avgViewDuration || formatSecondsToAvd(avdSecs);
       setSelectedVideoDraft({
         thumbnail: activeVideo.thumbnail || '/thumbnails/1.webp',
         subscribersGained: activeVideo.subscribersGained !== undefined ? activeVideo.subscribersGained : Math.round((activeVideo.views || 10000) * 0.014),
@@ -180,6 +186,8 @@ export default function CRM() {
         likes: activeVideo.likes || 0,
         comments: activeVideo.comments || 0,
         rpm: activeVideo.rpm || 33.64,
+        avgViewDuration: avdStr,
+        avgViewDurationSecs: avdSecs,
         title: activeVideo.title || ''
       });
     }
@@ -203,18 +211,31 @@ export default function CRM() {
 
   function startEdit(v) {
     setEditingId(v.id);
+    const avdSecs = v.avgViewDurationSecs || parseAvdToSeconds(v.avgViewDuration, 105);
+    const avdStr = v.avgViewDuration || formatSecondsToAvd(avdSecs);
     setEditBuf({
       views: v.views,
       likes: v.likes,
       comments: v.comments,
       rpm: v.rpm || 33.64,
+      avgViewDuration: avdStr,
+      avgViewDurationSecs: avdSecs,
       subscribersGained: v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014),
       thumbnail: v.thumbnail
     });
   }
 
   function saveEdit(id) {
-    updateVideoMetrics(id, editBuf);
+    const avdSecs = editBuf.avgViewDurationSecs !== undefined
+      ? Number(editBuf.avgViewDurationSecs)
+      : parseAvdToSeconds(editBuf.avgViewDuration, 105);
+    const avdStr = editBuf.avgViewDuration || formatSecondsToAvd(avdSecs);
+    const payload = {
+      ...editBuf,
+      avgViewDuration: avdStr,
+      avgViewDurationSecs: avdSecs
+    };
+    updateVideoMetrics(id, payload);
     setEditingId(null);
     showToast('Video metrics & thumbnail updated ✓', 'success');
   }
@@ -238,7 +259,14 @@ export default function CRM() {
 
   function applyVideoGrowthChanges() {
     if (!activeVideo) return;
-    updateVideoMetrics(activeVideo.id, selectedVideoDraft);
+    const avdSecs = selectedVideoDraft.avgViewDurationSecs || parseAvdToSeconds(selectedVideoDraft.avgViewDuration, 105);
+    const avdStr = selectedVideoDraft.avgViewDuration || formatSecondsToAvd(avdSecs);
+    const payload = {
+      ...selectedVideoDraft,
+      avgViewDuration: avdStr,
+      avgViewDurationSecs: avdSecs
+    };
+    updateVideoMetrics(activeVideo.id, payload);
     showToast(`Video "${activeVideo.title?.slice(0, 24)}…" updated ✓ Reflecting across all Studio pages.`, 'success');
   }
 
@@ -448,11 +476,11 @@ export default function CRM() {
                   </div>
                 </div>
 
-                {/* Subscriber Gain & Video Performance Card */}
+                {/* Subscriber Gain, Average View Timing & Performance Card */}
                 <div className="crm-card">
-                  <div className="crm-card-title">👥 3. Edit Per-Video Subscriber Gain</div>
+                  <div className="crm-card-title">👥 3. Edit Subscribers & View Timing (AVD)</div>
                   <p className="crm-card-desc">
-                    Define exact subscriber gain for this video. Reflects on Video Analytics Overview metric cards, audience subscriber breakdown, and channel growth charts.
+                    Define exact subscriber gain and average view duration for this video. Reflects on Video Analytics Overview, Watch Time cards, Engagement metrics, and Insforge database.
                   </p>
 
                   <CRMInput
@@ -490,7 +518,22 @@ export default function CRM() {
                     ))}
                   </div>
 
+                  {/* Average View Timing (AVD) Controls */}
                   <div className="crm-grid-2" style={{ marginTop: 8 }}>
+                    <CRMInput
+                      label="Average View Duration (AVD)"
+                      type="text"
+                      placeholder="e.g. 3:45 or 225s"
+                      value={selectedVideoDraft.avgViewDuration || '1:45'}
+                      onChange={v => {
+                        const secs = parseAvdToSeconds(v, 105);
+                        setSelectedVideoDraft(d => ({
+                          ...d,
+                          avgViewDuration: String(v),
+                          avgViewDurationSecs: secs
+                        }));
+                      }}
+                    />
                     <CRMInput
                       label="Video Views"
                       value={selectedVideoDraft.views}
@@ -498,6 +541,30 @@ export default function CRM() {
                       min={0}
                       step={1000}
                     />
+                  </div>
+
+                  <div className="crm-quick-pill-row" style={{ marginTop: 4 }}>
+                    <span className="crm-field-label" style={{ marginBottom: 0 }}>AVD timing presets:</span>
+                    {['0:45', '1:30', '2:45', '4:15', '6:30', '8:00', '12:00'].map(tStr => (
+                      <button
+                        key={tStr}
+                        type="button"
+                        className="crm-mini-pill"
+                        onClick={() => {
+                          const secs = parseAvdToSeconds(tStr, 105);
+                          setSelectedVideoDraft(d => ({
+                            ...d,
+                            avgViewDuration: tStr,
+                            avgViewDurationSecs: secs
+                          }));
+                        }}
+                      >
+                        ⏱️ {tStr}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
                     <CRMInput
                       label="Video RPM (₹)"
                       value={selectedVideoDraft.rpm}
@@ -506,33 +573,6 @@ export default function CRM() {
                       step={0.1}
                       unit="₹"
                     />
-                  </div>
-
-                  <div className="crm-quick-pill-row" style={{ marginTop: 4 }}>
-                    <span className="crm-field-label" style={{ marginBottom: 0 }}>View presets:</span>
-                    {[100000, 500000, 1000000, 2000000, 5000000, 10000000].map(vAmt => (
-                      <button
-                        key={vAmt}
-                        type="button"
-                        className="crm-mini-pill"
-                        onClick={() => {
-                          const gained = Math.round(vAmt * 0.014);
-                          setSelectedVideoDraft(d => ({
-                            ...d,
-                            views: vAmt,
-                            likes: Math.round(vAmt * 0.046),
-                            comments: Math.round(vAmt * 0.0034),
-                            subscribersGained: gained,
-                            subscribersLost: Math.round(gained * 0.12)
-                          }));
-                        }}
-                      >
-                        {vAmt >= 1000000 ? `${vAmt / 1000000}M` : `${vAmt / 1000}K`}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
                     <CRMInput
                       label="Likes Count"
                       value={selectedVideoDraft.likes}
@@ -540,6 +580,9 @@ export default function CRM() {
                       min={0}
                       step={50}
                     />
+                  </div>
+
+                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
                     <CRMInput
                       label="Comments Count"
                       value={selectedVideoDraft.comments}
@@ -547,6 +590,12 @@ export default function CRM() {
                       min={0}
                       step={10}
                     />
+                    <div className="crm-field">
+                      <label className="crm-field-label">Calculated Watch Time</label>
+                      <div className="crm-input" style={{ background: '#121224', color: '#38bdf8', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        ⏱️ {(((Number(selectedVideoDraft.views) || 0) * (selectedVideoDraft.avgViewDurationSecs || 105)) / 3600).toFixed(1)} hrs
+                      </div>
+                    </div>
                   </div>
 
                   <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
@@ -568,6 +617,16 @@ export default function CRM() {
                         {selectedVideoDraft.views > 0
                           ? `${((selectedVideoDraft.subscribersGained / selectedVideoDraft.views) * 100).toFixed(2)}%`
                           : '0.00%'}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span>Average View Duration:</span>
+                      <strong style={{ color: '#a78bfa' }}>{selectedVideoDraft.avgViewDuration || '1:45'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span>Calculated Watch Time:</span>
+                      <strong style={{ color: '#38bdf8' }}>
+                        {(((Number(selectedVideoDraft.views) || 0) * (selectedVideoDraft.avgViewDurationSecs || 105)) / 3600).toFixed(1)} hrs
                       </strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -619,6 +678,7 @@ export default function CRM() {
                     <th>Video & Thumbnail</th>
                     <th>Subs Gained</th>
                     <th>Views</th>
+                    <th>Avg Duration (AVD)</th>
                     <th>Likes</th>
                     <th>Comments</th>
                     <th>RPM (₹)</th>
@@ -659,6 +719,13 @@ export default function CRM() {
                             <td><input className="crm-inline-input" type="text" value={editBuf.views}
                               onKeyDown={handleInlineKeyDown}
                               onChange={e => setEditBuf(b => ({ ...b, views: parseSmartNumber(e.target.value, b.views) }))} /></td>
+                            <td><input className="crm-inline-input" type="text" style={{ width: '70px' }} value={editBuf.avgViewDuration || '1:45'}
+                              onKeyDown={handleInlineKeyDown}
+                              placeholder="3:45"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditBuf(b => ({ ...b, avgViewDuration: val, avgViewDurationSecs: parseAvdToSeconds(val, 105) }));
+                              }} /></td>
                             <td><input className="crm-inline-input" type="text" value={editBuf.likes}
                               onKeyDown={handleInlineKeyDown}
                               onChange={e => setEditBuf(b => ({ ...b, likes: parseSmartNumber(e.target.value, b.likes) }))} /></td>
@@ -682,6 +749,11 @@ export default function CRM() {
                               +{fmt(v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014))}
                             </td>
                             <td>{v.viewsFormatted || fmt(v.views)}</td>
+                            <td>
+                              <span style={{ color: '#38bdf8', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                ⏱️ {v.avgViewDuration || formatSecondsToAvd(v.avgViewDurationSecs || 105)}
+                              </span>
+                            </td>
                             <td>{(v.likes || 0).toLocaleString()}</td>
                             <td>{(v.comments || 0).toLocaleString()}</td>
                             <td>₹{(v.rpm || 33.64).toFixed(2)}</td>
@@ -912,6 +984,7 @@ export default function CRM() {
                       <th>Title</th>
                       <th>Subs Gained</th>
                       <th>Views</th>
+                      <th>Avg Duration (AVD)</th>
                       <th>Likes</th>
                       <th>RPM</th>
                       <th>Revenue</th>
@@ -924,6 +997,7 @@ export default function CRM() {
                         <td className="crm-vid-name" style={{ maxWidth: 260 }}>{v.title}</td>
                         <td style={{ color: '#4ade80' }}>+{fmt(v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014))}</td>
                         <td>{v.viewsFormatted}</td>
+                        <td><span style={{ color: '#38bdf8' }}>⏱️ {v.avgViewDuration || formatSecondsToAvd(v.avgViewDurationSecs || 105)}</span></td>
                         <td>{(v.likes || 0).toLocaleString()}</td>
                         <td>₹{(v.rpm || 33.64).toFixed(2)}</td>
                         <td className="crm-revenue-cell">{v.revenueFormatted}</td>

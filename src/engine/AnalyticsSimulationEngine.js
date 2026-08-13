@@ -11,8 +11,8 @@
  */
 
 export const CHANNEL_BENCHMARKS = {
-  name: 'Axiom Tech & Code',
-  handle: '@axiomtech',
+  name: 'Kids Toon',
+  handle: '@kidstoon',
   subscribers: 412850,
   lifetimeViews: 21450000,
   averageRpm: 33.64,
@@ -105,7 +105,7 @@ export const RAW_VIDEOS = [
     category: 'Education'
   },
   {
-    id: 'VID004',
+    id: 'VID006',
     title: 'Make AI Videos Using Notebook LM',
     description: 'Learn to build videos with NotebookLM.',
     duration: '12:14',
@@ -121,7 +121,7 @@ export const RAW_VIDEOS = [
     category: 'Science & Technology'
   },
   {
-    id: 'VID005',
+    id: 'VID007',
     title: 'Raj Shamani Business Idea',
     description: 'Analyzing top business ideas and SaaS strategies.',
     duration: '08:42',
@@ -137,23 +137,7 @@ export const RAW_VIDEOS = [
     category: 'Business'
   },
   {
-    id: 'VID006',
-    title: 'AI Blogging Course in 2026 using facebook, Instagram Youtube...',
-    description: 'Full course on AI blogging, social media traffic & monetization.',
-    duration: '10:18',
-    durationSecs: 618,
-    avgViewDuration: '3:12',
-    avgViewDurationSecs: 192,
-    views: 529000,
-    ctr: 6.2,
-    rpm: 33.80,
-    cpm: 58.14,
-    publishDate: '2026-05-15',
-    thumbnail: '/thumbnails/6.webp',
-    category: 'Education'
-  },
-  {
-    id: 'VID007',
+    id: 'VID008',
     title: 'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...',
     description: 'Create AI influencers with lip-sync and dancing animations for free.',
     duration: '07:56',
@@ -167,22 +151,6 @@ export const RAW_VIDEOS = [
     publishDate: '2026-06-02',
     thumbnail: '/thumbnails/7.webp',
     category: 'Entertainment'
-  },
-  {
-    id: 'VID008',
-    title: 'Open Source AI vs ChatGPT',
-    description: 'Detailed benchmark comparison between Llama 3, Mistral, and ChatGPT.',
-    duration: '11:05',
-    durationSecs: 665,
-    avgViewDuration: '4:15',
-    avgViewDurationSecs: 255,
-    views: 356000,
-    ctr: 5.1,
-    rpm: 32.80,
-    cpm: 56.42,
-    publishDate: '2026-06-20',
-    thumbnail: '/thumbnails/1.webp',
-    category: 'Science & Technology'
   },
   {
     id: 'VID009',

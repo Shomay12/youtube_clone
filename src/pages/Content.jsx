@@ -3,6 +3,36 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import './Content.css';
 
+const TABS = [
+  'Inspiration',
+  'Videos',
+  'Shows',
+  'Shorts',
+  'Live',
+  'Posts',
+  'Playlists',
+  'Podcasts',
+  'Courses',
+  'Promotions',
+  'Collaborations'
+];
+
+function formatContentDate(dStr) {
+  if (!dStr) return 'Aug 12, 2026';
+  if (/^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}$/.test(dStr)) return dStr;
+  const d = new Date(dStr);
+  if (isNaN(d.getTime())) return dStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatINR(val) {
+  if (val === undefined || val === null) return '₹0.00';
+  if (typeof val === 'string' && val.startsWith('₹')) return val;
+  const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]+/g, '')) : val;
+  if (isNaN(num)) return '₹0.00';
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 const Content = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,6 +56,11 @@ const Content = () => {
     else if (location.pathname.includes('/playlists')) setActiveTab('Playlists');
     else if (location.pathname.includes('/podcasts')) setActiveTab('Podcasts');
     else if (location.pathname.includes('/promotions')) setActiveTab('Promotions');
+    else if (location.pathname.includes('/inspiration')) setActiveTab('Inspiration');
+    else if (location.pathname.includes('/shows')) setActiveTab('Shows');
+    else if (location.pathname.includes('/posts')) setActiveTab('Posts');
+    else if (location.pathname.includes('/courses')) setActiveTab('Courses');
+    else if (location.pathname.includes('/collaborations')) setActiveTab('Collaborations');
     else setActiveTab('Videos');
   }, [location.pathname]);
 
@@ -43,15 +78,16 @@ const Content = () => {
 
   // Determine current active dataset
   let currentDataset = [];
-  if (activeTab === 'Videos') currentDataset = videos;
+  if (activeTab === 'Videos' || activeTab === 'Shows' || activeTab === 'Courses' || activeTab === 'Inspiration' || activeTab === 'Promotions' || activeTab === 'Collaborations') currentDataset = videos;
   else if (activeTab === 'Shorts') currentDataset = shorts;
   else if (activeTab === 'Live') currentDataset = liveStreams;
   else if (activeTab === 'Playlists') currentDataset = playlists;
   else if (activeTab === 'Podcasts') currentDataset = podcasts;
+  else if (activeTab === 'Posts') currentDataset = [];
 
   // Apply filters
   const filteredList = currentDataset.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(filterText.toLowerCase());
+    const matchesSearch = item.title?.toLowerCase().includes(filterText.toLowerCase()) || item.description?.toLowerCase().includes(filterText.toLowerCase());
     const matchesVisibility = visibilityFilter === 'All' || item.visibility === visibilityFilter;
     return matchesSearch && matchesVisibility;
   });
@@ -109,10 +145,10 @@ const Content = () => {
       
       {/* Navigation Tabs */}
       <div className="content-tabs">
-        {['Videos', 'Shorts', 'Live', 'Playlists', 'Podcasts', 'Promotions'].map(tab => (
+        {TABS.map(tab => (
           <button 
             key={tab} 
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
+            className={`content-tab-btn ${activeTab === tab ? 'active' : ''}`}
             onClick={() => handleTabChange(tab)}
           >
             {tab}
@@ -146,24 +182,11 @@ const Content = () => {
             <span className="material-symbols-outlined filter-icon">filter_list</span>
             <input 
               type="text" 
-              placeholder="Filter by title..." 
+              placeholder="Filter" 
               className="filter-input" 
               value={filterText}
               onChange={e => { setFilterText(e.target.value); setCurrentPage(1); }}
             />
-          </div>
-
-          <div className="filter-dropdowns">
-            <select 
-              className="visibility-filter-select"
-              value={visibilityFilter}
-              onChange={e => setVisibilityFilter(e.target.value)}
-            >
-              <option value="All">All Visibilities</option>
-              <option value="Public">Public</option>
-              <option value="Unlisted">Unlisted</option>
-              <option value="Private">Private</option>
-            </select>
           </div>
         </div>
       )}
@@ -235,13 +258,13 @@ const Content = () => {
                     checked={paginatedList.length > 0 && paginatedList.every(i => selectedIds.includes(i.id))}
                   />
                 </th>
-                <th className="video-col">{activeTab.slice(0, -1)}</th>
+                <th className="video-col">Video</th>
+                <th>Notices</th>
                 <th>Visibility</th>
-                <th>Restrictions</th>
-                <th>Date</th>
-                <th>Views</th>
-                <th>Comments</th>
-                <th>Likes</th>
+                <th className="th-date">Date <span className="date-sort-arrow">↓</span></th>
+                <th style={{ textAlign: 'right' }}>Views</th>
+                <th style={{ textAlign: 'right' }}>Est. revenue</th>
+                <th style={{ textAlign: 'right' }}>Comments</th>
               </tr>
             </thead>
             <tbody>
@@ -250,70 +273,81 @@ const Content = () => {
                   <td colSpan="8" className="no-content-cell">No items matching current filters.</td>
                 </tr>
               ) : (
-                paginatedList.map(item => (
-                  <tr key={item.id} className="video-row">
-                    <td className="checkbox-col">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.includes(item.id)} 
-                        onChange={() => handleSelectOne(item.id)}
-                      />
-                    </td>
-                    <td className="video-col">
-                      <div className="video-cell">
-                        <div className="video-thumb-container" onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`)}>
-                          <img src={item.thumbnail} alt={item.title} className="video-thumb-small" />
-                          {item.duration && <span className="video-duration-small">{item.duration}</span>}
-                        </div>
-                        <div className="video-info">
-                          <Link to={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`} className="video-title-link">{item.title}</Link>
-                          <p className="video-desc">{item.description ? item.description.substring(0, 60) + "..." : "No description"}</p>
-                          
-                          {/* Row Action Buttons on Hover */}
-                          <div className="hover-actions">
-                            <Link to={`${CHANNEL_PREFIX}/video/${item.id}`} title="Details">
-                              <span className="material-symbols-outlined">edit</span>
-                            </Link>
-                            <Link to={`${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days?video=${item.id}`} title="Analytics">
-                              <span className="material-symbols-outlined">insert_chart</span>
-                            </Link>
-                            <Link to={`${CHANNEL_PREFIX}/community/comments`} title="Comments">
-                              <span className="material-symbols-outlined">comment</span>
-                            </Link>
-                            <Link to={`${CHANNEL_PREFIX}/monetization/overview`} title="Monetization">
-                              <span className="material-symbols-outlined">monetization_on</span>
-                            </Link>
-                            <button title="Options" onClick={(e) => { e.stopPropagation(); copyLink(item.id); }}>
-                              <span className="material-symbols-outlined">more_vert</span>
-                            </button>
+                paginatedList.map(item => {
+                  const rev = item.revenue != null ? Number(item.revenue) : parseFloat((((Number(item.views) || 0) / 1000) * (Number(item.rpm) || 33.64)).toFixed(2));
+                  const commentsCount = item.comments != null ? Number(item.comments) : Math.round((Number(item.views) || 0) * 0.0034);
+                  const isUnlisted = item.visibility === 'Unlisted';
+                  const isPrivate = item.visibility === 'Private';
+
+                  return (
+                    <tr key={item.id} className="video-row">
+                      <td className="checkbox-col">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedIds.includes(item.id)} 
+                          onChange={() => handleSelectOne(item.id)}
+                        />
+                      </td>
+                      <td className="video-col">
+                        <div className="video-cell">
+                          <div className="video-thumb-container" onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`)}>
+                            <img src={item.thumbnail} alt={item.title} className="video-thumb-small" />
+                            {item.duration && <span className="video-duration-small">{item.duration}</span>}
+                          </div>
+                          <div className="video-info">
+                            <Link to={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`} className="video-title-link">{item.title}</Link>
+                            <p className="video-desc">{item.description ? item.description.substring(0, 95) + "..." : "No description"}</p>
+                            
+                            {/* Row Action Buttons on Hover */}
+                            <div className="hover-actions">
+                              <Link to={`${CHANNEL_PREFIX}/video/${item.id}`} title="Details">
+                                <span className="material-symbols-outlined">edit</span>
+                              </Link>
+                              <Link to={`${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days?video=${item.id}`} title="Analytics">
+                                <span className="material-symbols-outlined">insert_chart</span>
+                              </Link>
+                              <Link to={`${CHANNEL_PREFIX}/community/comments`} title="Comments">
+                                <span className="material-symbols-outlined">chat_bubble_outline</span>
+                              </Link>
+                              <Link to={`${CHANNEL_PREFIX}/monetization/overview`} title="Monetization">
+                                <span className="material-symbols-outlined">monetization_on</span>
+                              </Link>
+                              <button title="Options" onClick={(e) => { e.stopPropagation(); copyLink(item.id); }}>
+                                <span className="material-symbols-outlined">more_vert</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="visibility-cell">
-                        <span className={`material-symbols-outlined visibility-icon ${(item.visibility || 'Public').toLowerCase()}`}>
-                          {item.visibility === 'Public' ? 'visibility' : item.visibility === 'Private' ? 'visibility_off' : 'link'}
-                        </span>
-                        {item.visibility || 'Public'}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`restriction-badge ${item.restrictions !== 'None' ? 'warning' : ''}`}>
-                        {item.restrictions || "None"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="date-cell">
-                        <span>{item.date}</span>
-                        <span className="date-type">{item.status || "Published"}</span>
-                      </div>
-                    </td>
-                    <td>{item.viewsFormatted || item.views?.toLocaleString()}</td>
-                    <td>{item.comments?.toLocaleString()}</td>
-                    <td>{item.likes?.toLocaleString()}</td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="notices-cell">
+                        <span className="notices-dash">—</span>
+                      </td>
+                      <td>
+                        <div className="visibility-cell">
+                          <span className="material-symbols-outlined visibility-icon-yt">
+                            {isUnlisted ? 'link' : isPrivate ? 'lock' : 'public'}
+                          </span>
+                          <span>{item.visibility || 'Public'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="date-cell">
+                          <span className="date-text">{formatContentDate(item.publishDate || item.date)}</span>
+                          <span className="date-sub">{isUnlisted ? 'Uploaded' : (item.status || 'Published')}</span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="num-cell">{Number(item.views || 0).toLocaleString('en-IN')}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="num-cell">{formatINR(rev)}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="num-cell">{commentsCount.toLocaleString('en-IN')}</span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -346,3 +380,4 @@ const Content = () => {
 };
 
 export default Content;
+

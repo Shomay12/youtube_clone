@@ -4,6 +4,7 @@ import { SpreadsheetDataService } from '../services/SpreadsheetDataService';
 
 export function useSpreadsheetSync() {
   const {
+    loadFromDatabase,
     loadFromSpreadsheet,
     spreadsheetConfig,
     isSpreadsheetLoading,
@@ -14,13 +15,18 @@ export function useSpreadsheetSync() {
   const unsubscribeRef = useRef(null);
 
   useEffect(() => {
-    loadFromSpreadsheet();
+    // Attempt loading persistent state from Insforge Database first
+    loadFromDatabase(true).then((success) => {
+      if (!success) {
+        loadFromSpreadsheet(true);
+      }
+    });
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (unsubscribeRef.current) unsubscribeRef.current();
     };
-  }, [loadFromSpreadsheet]);
+  }, [loadFromDatabase, loadFromSpreadsheet]);
 
   useEffect(() => {
     if (intervalRef.current) {
