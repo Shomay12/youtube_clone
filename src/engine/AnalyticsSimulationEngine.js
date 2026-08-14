@@ -213,11 +213,51 @@ export const PROCESSED_VIDEOS = RAW_VIDEOS.map(v => {
   };
 });
 
+export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export function formatSingleDate(dateInput) {
+  if (!dateInput) return '';
+  const d = typeof dateInput === 'string' ? new Date(dateInput.includes('T') ? dateInput : `${dateInput}T00:00:00Z`) : dateInput;
+  if (isNaN(d.getTime())) return String(dateInput);
+  const month = MONTH_NAMES[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const year = d.getUTCFullYear();
+  return `${month} ${day}, ${year}`;
+}
+
+export function formatDateRangeText(startDateInput, endDateInput) {
+  if (!startDateInput || !endDateInput) return '';
+  const s = typeof startDateInput === 'string' ? new Date(startDateInput.includes('T') ? startDateInput : `${startDateInput}T00:00:00Z`) : startDateInput;
+  const e = typeof endDateInput === 'string' ? new Date(endDateInput.includes('T') ? endDateInput : `${endDateInput}T00:00:00Z`) : endDateInput;
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return `${startDateInput} – ${endDateInput}`;
+
+  const sMonth = MONTH_NAMES[s.getUTCMonth()];
+  const sDay = s.getUTCDate();
+  const sYear = s.getUTCFullYear();
+
+  const eMonth = MONTH_NAMES[e.getUTCMonth()];
+  const eDay = e.getUTCDate();
+  const eYear = e.getUTCFullYear();
+
+  if (s.toISOString().split('T')[0] === e.toISOString().split('T')[0]) {
+    return `${eMonth} ${eDay}, ${eYear}`;
+  }
+
+  if (sYear === eYear) {
+    if (sMonth === eMonth) {
+      return `${sMonth} ${sDay} – ${eDay}, ${sYear}`;
+    }
+    return `${sMonth} ${sDay} – ${eMonth} ${eDay}, ${sYear}`;
+  }
+  return `${sMonth} ${sDay}, ${sYear} – ${eMonth} ${eDay}, ${eYear}`;
+}
+
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365) {
-  const today = new Date('2026-08-04T00:00:00Z');
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-12') {
+  const today = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T00:00:00Z`);
   const dailyData = [];
 
   let cumulativeSubs = 280000;
@@ -287,7 +327,7 @@ export function generateDailyTimeSeries(daysCount = 365) {
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365);
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-12');
 
 /**
  * Filter daily metrics based on date range boundaries
@@ -453,9 +493,9 @@ export function getAudienceBreakdown(totalViews) {
 /**
  * Realtime continuous data generator (Last 60 minutes & Last 48 hours)
  */
-export function generateRealtimeDataset() {
+export function generateRealtimeDataset(anchorDate = '2026-08-12') {
   const last60Minutes = [];
-  const now = new Date('2026-08-04T12:00:00Z');
+  const now = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T12:00:00Z`);
 
   for (let i = 59; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 60 * 1000);

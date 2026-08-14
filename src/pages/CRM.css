@@ -492,6 +492,47 @@
 .crm-top-name { font-size: 13px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
 .crm-top-val { font-size: 13px; color: #fbbf24; font-weight: 600; flex-shrink: 0; }
 
+/* ─── Date Controls & Live Preview ─── */
+.crm-mini-pill.active-pill {
+  background: #1e1035;
+  color: #a78bfa;
+  border-color: #7c3aed;
+  font-weight: 600;
+}
+
+.crm-date-preview-box {
+  background: #0a0a14;
+  border: 1px solid #1e1e3a;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.date-preview-main-badge {
+  font-size: 20px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  text-align: center;
+  letter-spacing: -0.3px;
+}
+
+.date-preview-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.date-preview-details strong {
+  color: #e2e8f0;
+}
+
 @media (max-width: 900px) {
   .crm-grid-2 { grid-template-columns: 1fr; }
   .crm-grid-3 { grid-template-columns: 1fr; }

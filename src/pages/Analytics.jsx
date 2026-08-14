@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useStore, formatINR, fmtV, fmtW, fmtS } from '../store/useStore';
+import { formatDateRangeText, formatSingleDate } from '../engine/AnalyticsSimulationEngine';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceDot
@@ -50,6 +51,10 @@ const Analytics = () => {
   const {
     videos,
     channelInfo,
+    simulationAnchorDate,
+    customStartDate,
+    customEndDate,
+    dateRangeVersion,
     selectedDateRange,
     setDateRange,
     getAnalyticsForRange,
@@ -104,11 +109,21 @@ const Analytics = () => {
   }, [tickRealtime]);
 
   // Compute analytics dynamically based on selected date range & video from Excel data
-  // videos and channelInfo are deps so CRM updates instantly re-compute all charts & metric cards
+  // videos, channelInfo, and dateRangeVersion are deps so CRM updates instantly re-compute all charts & metric cards
   const computedData = useMemo(() => {
     return getAnalyticsForRange(selectedDateRange, isVideoMode ? currentVideo.id : null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDateRange, isVideoMode, currentVideo.id, getAnalyticsForRange, videos, channelInfo]);
+  }, [
+    selectedDateRange,
+    isVideoMode,
+    currentVideo.id,
+    simulationAnchorDate,
+    customStartDate,
+    customEndDate,
+    dateRangeVersion,
+    getAnalyticsForRange,
+    videos,
+    channelInfo
+  ]);
 
   const { daily, aggregated, trafficSources, audience, dateRangeLabel } = computedData;
 
@@ -320,6 +335,29 @@ const Analytics = () => {
     return `${month} ${day}, ${year}`;
   };
 
+  const formatXAxisTick = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    if (!dateStr.includes('-') && !dateStr.includes('/')) return dateStr;
+
+    const parts = dateStr.split('-');
+    let dateObj;
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      dateObj = new Date(dateStr);
+    }
+
+    if (isNaN(dateObj.getTime())) return dateStr;
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[dateObj.getMonth()];
+    const day = dateObj.getDate();
+    return `${month} ${day}`;
+  };
+
   const formatYAxisValue = (val) => {
     if (typeof val !== 'number') return val;
     if (val === 0) return '0';
@@ -418,6 +456,15 @@ const Analytics = () => {
     return found ? found.label : (isVideoMode ? 'Since published' : 'Last 28 days');
   }, [isVideoMode, selectedDateRange, ALL_DATE_PRESETS]);
 
+  const videoDateLabel = useMemo(() => {
+    if (!isVideoMode) return dateRangeLabel;
+    if (selectedDateRange && selectedDateRange !== 'since_published') {
+      return dateRangeLabel;
+    }
+    const pDate = currentVideo?.publishDate || currentVideo?.date || '2026-07-22';
+    return `${formatSingleDate(pDate)} – Now`;
+  }, [isVideoMode, selectedDateRange, dateRangeLabel, currentVideo]);
+
   // Top videos sorted by revenue calculated using (Views / 1000) * RPM
   const topEarningVideos = useMemo(() => {
     return [...videos].map(v => {
@@ -478,7 +525,7 @@ const Analytics = () => {
               onClick={() => setShowDatePicker(!showDatePicker)}
               title="Select analytics date range"
             >
-              <span className="date-sub-text">{isVideoMode ? 'Jul 22, 2026 – Now' : dateRangeLabel}</span>
+              <span className="date-sub-text">{isVideoMode ? videoDateLabel : dateRangeLabel}</span>
               <span className="date-main-text">
                 <span>{activePresetLabel}</span>
                 <span className="material-symbols-outlined date-arrow">keyboard_arrow_down</span>
@@ -632,7 +679,7 @@ const Analytics = () => {
                         stroke="#717171"
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={formatXAxisDate}
+                        tickFormatter={formatXAxisTick}
                         ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                       />
                       <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)} />
@@ -975,7 +1022,7 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={formatXAxisDate}
+                    tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
@@ -1060,7 +1107,7 @@ const Analytics = () => {
             </div>
 
             <div className="audience-col">
-              <StudioCard title="Impressions and how they led to watch time" subtitle="Data available Jul 22 – Aug 5, 2026 (15 days)">
+              <StudioCard title="Impressions and how they led to watch time" subtitle={`Data available ${dateRangeLabel} (${(daily || []).length} days)`}>
                 <div className="youtube-funnel-container">
                   <div className="funnel-level level-1">
                     <div className="funnel-label">Impressions</div>
@@ -1157,7 +1204,7 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={formatXAxisDate}
+                    tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
@@ -1370,7 +1417,7 @@ const Analytics = () => {
             </StudioCard>
 
             {/* Funnel: Impressions and how they led to watch time */}
-            <StudioCard title="Impressions and how they led to watch time" subtitle="Data available Jul 7 – Aug 3, 2026 (28 days)">
+            <StudioCard title="Impressions and how they led to watch time" subtitle={`Data available ${dateRangeLabel} (${(daily || []).length} days)`}>
               <div className="youtube-funnel-container">
                 <div className="funnel-level level-1">
                   <div className="funnel-label">Impressions</div>
@@ -1510,7 +1557,7 @@ const Analytics = () => {
                     stroke="#717171"
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={formatXAxisDate}
+                    tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
@@ -1550,7 +1597,7 @@ const Analytics = () => {
             {/* Left Column */}
             <div className="audience-col">
               {/* Audience by watch behavior */}
-              <StudioCard title="Audience by watch behavior" subtitle="Monthly audience · Aug 3, 2026" infoIcon={true}>
+              <StudioCard title="Audience by watch behavior" subtitle={`Monthly audience · ${formatSingleDate(simulationAnchorDate || '2026-08-12')}`} infoIcon={true}>
                 <div className="format-segmented-bar margin-bottom-16">
                   <div className="segment seg-purple" style={{ width: '81%' }} />
                   <div className="segment seg-lavender" style={{ width: '16%' }} />
@@ -1883,7 +1930,7 @@ const Analytics = () => {
                     stroke="#888888"
                     tickLine={false}
                     axisLine={{ stroke: '#e5e5e5' }}
-                    tickFormatter={formatXAxisDate}
+                    tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
@@ -2070,7 +2117,7 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={daily}>
                 <CartesianGrid stroke="#303030" vertical={false} />
-                <XAxis dataKey="date" tickFormatter={formatXAxisDate} />
+                <XAxis dataKey="date" tickFormatter={formatXAxisTick} />
                 <YAxis orientation="right" tickFormatter={formatYAxisValue} />
                 <Tooltip />
                 <Area type="monotone" dataKey="views" stroke="#ff9800" fill="rgba(255, 152, 0, 0.12)" strokeWidth={2.5} />

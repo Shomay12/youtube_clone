@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService';
+import { formatDateRangeText, formatSingleDate } from '../engine/AnalyticsSimulationEngine';
 import './CRM.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -114,6 +115,8 @@ const CRMInput = ({ label, value, onChange, type = 'number', min, max, step = 1,
 export default function CRM() {
   const {
     channelInfo, videos,
+    simulationAnchorDate, selectedDateRange, customStartDate, customEndDate,
+    setSimulationAnchorDate, setDateRange,
     crmUpdateChannelMetrics, updateVideoMetrics,
     bulkSetVideoRPM, bulkMultiplyViews,
     crmApplyPreset, reloadFromSpreadsheet,
@@ -128,10 +131,29 @@ export default function CRM() {
   const [bulkRPM, setBulkRPM] = useState(33.64);
   const [bulkFactor, setBulkFactor] = useState(1.0);
 
+  // Date Range Draft State
+  const [dateDraft, setDateDraft] = useState({
+    anchorDate: simulationAnchorDate || '2026-08-12',
+    startDate: customStartDate || '2026-07-16',
+    endDate: customEndDate || '2026-08-12',
+    preset: selectedDateRange || 'last28'
+  });
+
+  useEffect(() => {
+    setDateDraft({
+      anchorDate: simulationAnchorDate || '2026-08-12',
+      startDate: customStartDate || '2026-07-16',
+      endDate: customEndDate || '2026-08-12',
+      preset: selectedDateRange || 'last28'
+    });
+  }, [simulationAnchorDate, customStartDate, customEndDate, selectedDateRange]);
+
   // Selected video for dedicated Video Growth & Thumbnails section
   const [selectedVideoId, setSelectedVideoId] = useState(videos[0]?.id || 'vid_01');
   const [selectedVideoDraft, setSelectedVideoDraft] = useState({
     thumbnail: videos[0]?.thumbnail || '/thumbnails/1.webp',
+    duration: videos[0]?.duration || '10:18',
+    durationSecs: videos[0]?.durationSecs || 618,
     subscribersGained: videos[0]?.subscribersGained || 29800,
     subscribersLost: videos[0]?.subscribersLost || 3576,
     views: videos[0]?.views || 2130000,
@@ -178,8 +200,12 @@ export default function CRM() {
     if (activeVideo) {
       const avdSecs = activeVideo.avgViewDurationSecs || parseAvdToSeconds(activeVideo.avgViewDuration, 105);
       const avdStr = activeVideo.avgViewDuration || formatSecondsToAvd(avdSecs);
+      const durSecs = activeVideo.durationSecs || parseAvdToSeconds(activeVideo.duration, 618);
+      const durStr = activeVideo.duration || formatSecondsToAvd(durSecs);
       setSelectedVideoDraft({
         thumbnail: activeVideo.thumbnail || '/thumbnails/1.webp',
+        duration: durStr,
+        durationSecs: durSecs,
         subscribersGained: activeVideo.subscribersGained !== undefined ? activeVideo.subscribersGained : Math.round((activeVideo.views || 10000) * 0.014),
         subscribersLost: activeVideo.subscribersLost !== undefined ? activeVideo.subscribersLost : Math.round(((activeVideo.subscribersGained || 1000) * 0.12)),
         views: activeVideo.views || 0,
@@ -213,11 +239,15 @@ export default function CRM() {
     setEditingId(v.id);
     const avdSecs = v.avgViewDurationSecs || parseAvdToSeconds(v.avgViewDuration, 105);
     const avdStr = v.avgViewDuration || formatSecondsToAvd(avdSecs);
+    const durSecs = v.durationSecs || parseAvdToSeconds(v.duration, 618);
+    const durStr = v.duration || formatSecondsToAvd(durSecs);
     setEditBuf({
       views: v.views,
       likes: v.likes,
       comments: v.comments,
       rpm: v.rpm || 33.64,
+      duration: durStr,
+      durationSecs: durSecs,
       avgViewDuration: avdStr,
       avgViewDurationSecs: avdSecs,
       subscribersGained: v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014),
@@ -230,14 +260,21 @@ export default function CRM() {
       ? Number(editBuf.avgViewDurationSecs)
       : parseAvdToSeconds(editBuf.avgViewDuration, 105);
     const avdStr = editBuf.avgViewDuration || formatSecondsToAvd(avdSecs);
+    const durSecs = editBuf.durationSecs !== undefined
+      ? Number(editBuf.durationSecs)
+      : parseAvdToSeconds(editBuf.duration, 618);
+    const durStr = editBuf.duration || formatSecondsToAvd(durSecs);
+
     const payload = {
       ...editBuf,
+      duration: durStr,
+      durationSecs: durSecs,
       avgViewDuration: avdStr,
       avgViewDurationSecs: avdSecs
     };
     updateVideoMetrics(id, payload);
     setEditingId(null);
-    showToast('Video metrics & thumbnail updated ✓', 'success');
+    showToast('Video metrics, duration & thumbnail updated ✓', 'success');
   }
 
   function cancelEdit() { setEditingId(null); }
@@ -261,13 +298,24 @@ export default function CRM() {
     if (!activeVideo) return;
     const avdSecs = selectedVideoDraft.avgViewDurationSecs || parseAvdToSeconds(selectedVideoDraft.avgViewDuration, 105);
     const avdStr = selectedVideoDraft.avgViewDuration || formatSecondsToAvd(avdSecs);
+    const durSecs = selectedVideoDraft.durationSecs || parseAvdToSeconds(selectedVideoDraft.duration, 618);
+    const durStr = selectedVideoDraft.duration || formatSecondsToAvd(durSecs);
     const payload = {
       ...selectedVideoDraft,
+      duration: durStr,
+      durationSecs: durSecs,
       avgViewDuration: avdStr,
       avgViewDurationSecs: avdSecs
     };
     updateVideoMetrics(activeVideo.id, payload);
     showToast(`Video "${activeVideo.title?.slice(0, 24)}…" updated ✓ Reflecting across all Studio pages.`, 'success');
+  }
+
+  function applyDates() {
+    setSimulationAnchorDate(dateDraft.anchorDate, dateDraft.startDate, dateDraft.endDate);
+    setDateRange(dateDraft.preset, dateDraft.startDate, dateDraft.endDate);
+    const label = formatDateRangeText(dateDraft.startDate, dateDraft.endDate);
+    showToast(`Date range set to "${label}" across all graphs ✓`, 'success');
   }
 
   // Global Keyboard Shortcuts (Cmd+S / Ctrl+S to save)
@@ -277,12 +325,13 @@ export default function CRM() {
         e.preventDefault();
         if (activeSection === 'growth') applyVideoGrowthChanges();
         else if (activeSection === 'channel') applyChannel();
+        else if (activeSection === 'dates') applyDates();
         else if (activeSection === 'bulk') applyBulkMultiply();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, selectedVideoDraft, channelDraft, bulkFactor, bulkRPM, activeVideo]);
+  }, [activeSection, selectedVideoDraft, channelDraft, dateDraft, bulkFactor, bulkRPM, activeVideo]);
 
   function autoCalculateEngagement() {
     const v = Number(selectedVideoDraft.views) || 0;
@@ -317,6 +366,7 @@ export default function CRM() {
     { key: 'growth',   icon: '🖼️', label: 'Thumbnails & Subs' },
     { key: 'videos',   icon: '🎬', label: 'Videos Manager' },
     { key: 'channel',  icon: '📡', label: 'Channel Metrics' },
+    { key: 'dates',    icon: '📅', label: 'Dates & Range' },
     { key: 'bulk',     icon: '⚡', label: 'Bulk Actions' },
     { key: 'preview',  icon: '👁️', label: 'Live Preview' },
   ];
@@ -362,6 +412,7 @@ export default function CRM() {
               {activeSection === 'growth' && 'Edit per-video subscriber gain and replace thumbnails with live instant synchronization across Studio & Analytics'}
               {activeSection === 'videos' && 'Edit per-video metrics — subscriber gains, thumbnails, views, likes & RPM'}
               {activeSection === 'channel' && 'Edit channel-level stats — changes reflect instantly in YouTube Studio'}
+              {activeSection === 'dates' && 'Control simulation anchor dates, 28-day window (e.g. Jul 16 – Aug 12, 2026), and synchronize date axes across all graphs'}
               {activeSection === 'bulk' && 'Apply batch changes across all videos at once'}
               {activeSection === 'preview' && 'Read-only live snapshot of current store values'}
             </p>
@@ -427,7 +478,7 @@ export default function CRM() {
                       alt="Thumbnail Preview"
                       className="crm-thumbnail-preview-img"
                     />
-                    <div className="crm-preview-duration-badge">{activeVideo.duration || '12:45'}</div>
+                    <div className="crm-preview-duration-badge">{selectedVideoDraft.duration || activeVideo.duration || '10:18'}</div>
                   </div>
 
                   <div className="crm-field">
@@ -476,50 +527,29 @@ export default function CRM() {
                   </div>
                 </div>
 
-                {/* Subscriber Gain, Average View Timing & Performance Card */}
+                {/* Subscriber Gain, Video Duration & AVD Timing Card */}
                 <div className="crm-card">
-                  <div className="crm-card-title">👥 3. Edit Subscribers & View Timing (AVD)</div>
+                  <div className="crm-card-title">⏱️ 3. Edit Video Duration, AVD & Subscribers</div>
                   <p className="crm-card-desc">
-                    Define exact subscriber gain and average view duration for this video. Reflects on Video Analytics Overview, Watch Time cards, Engagement metrics, and Insforge database.
+                    Define total video length, average view duration (AVD), subscriber gain, and engagement. Reflects instantly across Video Analytics, Watch Time, and Studio Content pages.
                   </p>
 
-                  <CRMInput
-                    label="Subscribers Gained from this Video"
-                    value={selectedVideoDraft.subscribersGained}
-                    onChange={v => {
-                      const gained = Number(v);
-                      const lost = Math.round(gained * 0.12);
-                      setSelectedVideoDraft(d => ({
-                        ...d,
-                        subscribersGained: gained,
-                        subscribersLost: lost
-                      }));
-                    }}
-                    min={0}
-                    step={100}
-                    unit="subs"
-                  />
-
-                  <div className="crm-quick-pill-row">
-                    <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick presets:</span>
-                    {[500, 1500, 5000, 15000, 50000, 100000].map(amt => (
-                      <button
-                        key={amt}
-                        type="button"
-                        className="crm-mini-pill"
-                        onClick={() => setSelectedVideoDraft(d => ({
+                  {/* Video Duration & AVD Duration Controls */}
+                  <div className="crm-grid-2">
+                    <CRMInput
+                      label="Video Total Duration"
+                      type="text"
+                      placeholder="e.g. 10:18 or 14:22"
+                      value={selectedVideoDraft.duration || '10:18'}
+                      onChange={v => {
+                        const secs = parseAvdToSeconds(v, 618);
+                        setSelectedVideoDraft(d => ({
                           ...d,
-                          subscribersGained: amt,
-                          subscribersLost: Math.round(amt * 0.12)
-                        }))}
-                      >
-                        +{amt >= 1000 ? `${amt / 1000}K` : amt}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Average View Timing (AVD) Controls */}
-                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
+                          duration: String(v),
+                          durationSecs: secs
+                        }));
+                      }}
+                    />
                     <CRMInput
                       label="Average View Duration (AVD)"
                       type="text"
@@ -534,22 +564,36 @@ export default function CRM() {
                         }));
                       }}
                     />
-                    <CRMInput
-                      label="Video Views"
-                      value={selectedVideoDraft.views}
-                      onChange={v => setSelectedVideoDraft(d => ({ ...d, views: v }))}
-                      min={0}
-                      step={1000}
-                    />
                   </div>
 
                   <div className="crm-quick-pill-row" style={{ marginTop: 4 }}>
-                    <span className="crm-field-label" style={{ marginBottom: 0 }}>AVD timing presets:</span>
+                    <span className="crm-field-label" style={{ marginBottom: 0 }}>Duration presets:</span>
+                    {['3:20', '5:45', '8:12', '10:18', '14:22', '18:40', '25:00', '42:15'].map(dStr => (
+                      <button
+                        key={dStr}
+                        type="button"
+                        className={`crm-mini-pill ${selectedVideoDraft.duration === dStr ? 'active-pill' : ''}`}
+                        onClick={() => {
+                          const secs = parseAvdToSeconds(dStr, 618);
+                          setSelectedVideoDraft(d => ({
+                            ...d,
+                            duration: dStr,
+                            durationSecs: secs
+                          }));
+                        }}
+                      >
+                        ⏱️ {dStr}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="crm-quick-pill-row" style={{ marginTop: 4 }}>
+                    <span className="crm-field-label" style={{ marginBottom: 0 }}>AVD presets:</span>
                     {['0:45', '1:30', '2:45', '4:15', '6:30', '8:00', '12:00'].map(tStr => (
                       <button
                         key={tStr}
                         type="button"
-                        className="crm-mini-pill"
+                        className={`crm-mini-pill ${selectedVideoDraft.avgViewDuration === tStr ? 'active-pill' : ''}`}
                         onClick={() => {
                           const secs = parseAvdToSeconds(tStr, 105);
                           setSelectedVideoDraft(d => ({
@@ -559,9 +603,35 @@ export default function CRM() {
                           }));
                         }}
                       >
-                        ⏱️ {tStr}
+                        📊 {tStr}
                       </button>
                     ))}
+                  </div>
+
+                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
+                    <CRMInput
+                      label="Subscribers Gained"
+                      value={selectedVideoDraft.subscribersGained}
+                      onChange={v => {
+                        const gained = Number(v);
+                        const lost = Math.round(gained * 0.12);
+                        setSelectedVideoDraft(d => ({
+                          ...d,
+                          subscribersGained: gained,
+                          subscribersLost: lost
+                        }));
+                      }}
+                      min={0}
+                      step={100}
+                      unit="subs"
+                    />
+                    <CRMInput
+                      label="Video Views"
+                      value={selectedVideoDraft.views}
+                      onChange={v => setSelectedVideoDraft(d => ({ ...d, views: v }))}
+                      min={0}
+                      step={1000}
+                    />
                   </div>
 
                   <div className="crm-grid-2" style={{ marginTop: 8 }}>
@@ -612,16 +682,20 @@ export default function CRM() {
                   {/* Impact Summary Pill */}
                   <div className="crm-preview-small" style={{ marginTop: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span>Conversion Rate:</span>
-                      <strong style={{ color: '#4ade80' }}>
-                        {selectedVideoDraft.views > 0
-                          ? `${((selectedVideoDraft.subscribersGained / selectedVideoDraft.views) * 100).toFixed(2)}%`
-                          : '0.00%'}
-                      </strong>
+                      <span>Video Duration:</span>
+                      <strong style={{ color: '#e2e8f0' }}>{selectedVideoDraft.duration || '10:18'}</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span>Average View Duration:</span>
+                      <span>Average View Duration (AVD):</span>
                       <strong style={{ color: '#a78bfa' }}>{selectedVideoDraft.avgViewDuration || '1:45'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span>Average Percentage Viewed (Retention):</span>
+                      <strong style={{ color: '#ec4899' }}>
+                        {(selectedVideoDraft.durationSecs > 0 && selectedVideoDraft.avgViewDurationSecs > 0)
+                          ? `${Math.min(100, Math.round(((selectedVideoDraft.avgViewDurationSecs || 105) / selectedVideoDraft.durationSecs) * 1000) / 10)}%`
+                          : '17.0%'}
+                      </strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span>Calculated Watch Time:</span>
@@ -676,6 +750,7 @@ export default function CRM() {
                 <thead>
                   <tr>
                     <th>Video & Thumbnail</th>
+                    <th>Duration</th>
                     <th>Subs Gained</th>
                     <th>Views</th>
                     <th>Avg Duration (AVD)</th>
@@ -713,6 +788,13 @@ export default function CRM() {
                         </td>
                         {isEditing ? (
                           <>
+                            <td><input className="crm-inline-input" type="text" style={{ width: '65px' }} value={editBuf.duration || '10:18'}
+                              onKeyDown={handleInlineKeyDown}
+                              placeholder="10:18"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditBuf(b => ({ ...b, duration: val, durationSecs: parseAvdToSeconds(val, 618) }));
+                              }} /></td>
                             <td><input className="crm-inline-input" type="text" value={editBuf.subscribersGained}
                               onKeyDown={handleInlineKeyDown}
                               onChange={e => setEditBuf(b => ({ ...b, subscribersGained: parseSmartNumber(e.target.value, b.subscribersGained) }))} /></td>
@@ -745,6 +827,9 @@ export default function CRM() {
                           </>
                         ) : (
                           <>
+                            <td style={{ color: '#e2e8f0', fontWeight: 500 }}>
+                              {v.duration || formatSecondsToAvd(v.durationSecs || 618)}
+                            </td>
                             <td style={{ color: '#4ade80', fontWeight: 600 }}>
                               +{fmt(v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014))}
                             </td>
@@ -847,6 +932,214 @@ export default function CRM() {
                 }}
               >
                 📊 Auto-align with sum of all videos
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── DATES & RANGE CONTROL ── */}
+        {activeSection === 'dates' && (
+          <div className="crm-section">
+            <div className="crm-grid-2">
+              {/* Anchor Date Card */}
+              <div className="crm-card">
+                <div className="crm-card-title">📅 1. Simulation Anchor Date (Today)</div>
+                <p className="crm-card-desc">
+                  Controls the current end date for all time-series simulations and analytics calculations across YouTube Studio.
+                </p>
+
+                <div className="crm-field">
+                  <label className="crm-field-label">Anchor Date (YYYY-MM-DD)</label>
+                  <input
+                    className="crm-input"
+                    type="date"
+                    value={dateDraft.anchorDate}
+                    onChange={e => {
+                      const newAnchor = e.target.value;
+                      if (newAnchor) {
+                        const d = new Date(`${newAnchor}T00:00:00Z`);
+                        d.setUTCDate(d.getUTCDate() - 27);
+                        const autoStart = d.toISOString().split('T')[0];
+                        setDateDraft(prev => ({
+                          ...prev,
+                          anchorDate: newAnchor,
+                          endDate: newAnchor,
+                          startDate: autoStart
+                        }));
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
+                  <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick anchor presets:</span>
+                  {[
+                    { label: 'Aug 12, 2026 (Default)', date: '2026-08-12' },
+                    { label: 'Aug 14, 2026', date: '2026-08-14' },
+                    { label: 'Aug 4, 2026', date: '2026-08-04' },
+                    { label: 'Jul 31, 2026', date: '2026-07-31' },
+                    { label: 'Device Date', date: new Date().toISOString().split('T')[0] }
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      className={`crm-mini-pill ${dateDraft.anchorDate === p.date ? 'active-pill' : ''}`}
+                      onClick={() => {
+                        const d = new Date(`${p.date}T00:00:00Z`);
+                        d.setUTCDate(d.getUTCDate() - 27);
+                        const autoStart = d.toISOString().split('T')[0];
+                        setDateDraft(prev => ({
+                          ...prev,
+                          anchorDate: p.date,
+                          endDate: p.date,
+                          startDate: autoStart
+                        }));
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date Range Preset Selector */}
+              <div className="crm-card">
+                <div className="crm-card-title">⚙️ 2. Active Analytics Preset</div>
+                <p className="crm-card-desc">
+                  Select which period YouTube Studio opens by default.
+                </p>
+
+                <div className="crm-field">
+                  <label className="crm-field-label">Active Preset Range</label>
+                  <select
+                    className="crm-input"
+                    style={{ background: '#121224', color: '#fff', cursor: 'pointer' }}
+                    value={dateDraft.preset}
+                    onChange={e => setDateDraft(prev => ({ ...prev, preset: e.target.value }))}
+                  >
+                    <option value="last28">Last 28 days (Default)</option>
+                    <option value="last7">Last 7 days</option>
+                    <option value="last90">Last 90 days</option>
+                    <option value="365">Last 365 days</option>
+                    <option value="lifetime">Lifetime</option>
+                    <option value="august">August 2026</option>
+                    <option value="july">July 2026</option>
+                    <option value="june">June 2026</option>
+                    <option value="custom">Custom Date Range</option>
+                  </select>
+                </div>
+
+                <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
+                  <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick presets:</span>
+                  {[
+                    { label: 'Last 28 days', key: 'last28' },
+                    { label: 'Last 7 days', key: 'last7' },
+                    { label: 'Last 90 days', key: 'last90' },
+                    { label: 'August', key: 'august' },
+                    { label: 'Custom', key: 'custom' }
+                  ].map(p => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      className={`crm-mini-pill ${dateDraft.preset === p.key ? 'active-pill' : ''}`}
+                      onClick={() => setDateDraft(prev => ({ ...prev, preset: p.key }))}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Exact Date Range Window Card */}
+              <div className="crm-card">
+                <div className="crm-card-title">📆 3. Custom Date Range Window</div>
+                <p className="crm-card-desc">
+                  Directly customize start and end dates. Used for "Last 28 days" and "Custom" ranges.
+                </p>
+
+                <div className="crm-grid-2">
+                  <div className="crm-field">
+                    <label className="crm-field-label">Start Date</label>
+                    <input
+                      className="crm-input"
+                      type="date"
+                      value={dateDraft.startDate}
+                      onChange={e => setDateDraft(prev => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="crm-field">
+                    <label className="crm-field-label">End Date</label>
+                    <input
+                      className="crm-input"
+                      type="date"
+                      value={dateDraft.endDate}
+                      onChange={e => setDateDraft(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
+                  <span className="crm-field-label" style={{ marginBottom: 0 }}>28-day templates:</span>
+                  {[
+                    { label: 'Jul 16 – Aug 12, 2026 (Default)', start: '2026-07-16', end: '2026-08-12' },
+                    { label: 'Jul 18 – Aug 14, 2026', start: '2026-07-18', end: '2026-08-14' },
+                    { label: 'Jul 7 – Aug 4, 2026', start: '2026-07-07', end: '2026-08-04' },
+                    { label: 'Jun 18 – Jul 15, 2026', start: '2026-06-18', end: '2026-07-15' },
+                  ].map(t => (
+                    <button
+                      key={t.label}
+                      type="button"
+                      className={`crm-mini-pill ${dateDraft.startDate === t.start && dateDraft.endDate === t.end ? 'active-pill' : ''}`}
+                      onClick={() => setDateDraft(prev => ({
+                        ...prev,
+                        startDate: t.start,
+                        endDate: t.end,
+                        anchorDate: t.end
+                      }))}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Preview Card */}
+              <div className="crm-card crm-preview-bar-vertical">
+                <div className="crm-card-title">🔍 Live Date Preview</div>
+                <div className="crm-date-preview-box">
+                  <div className="date-preview-main-badge">
+                    {formatDateRangeText(dateDraft.startDate, dateDraft.endDate)}
+                  </div>
+                  <div className="date-preview-details">
+                    <div><strong>Active Preset:</strong> {dateDraft.preset}</div>
+                    <div><strong>Start Date:</strong> {dateDraft.startDate}</div>
+                    <div><strong>End Date:</strong> {dateDraft.endDate}</div>
+                    <div><strong>Duration:</strong> {Math.max(1, Math.round((new Date(dateDraft.endDate) - new Date(dateDraft.startDate)) / (1000 * 60 * 60 * 24)) + 1)} days</div>
+                    <div style={{ color: '#4ade80', fontSize: '12px', marginTop: '6px' }}>
+                      ✓ Synchronizes automatically to: Overview AreaChart, Reach/Content Chart, Engagement Chart, Audience Chart, Revenue Chart, Trends Chart & Tooltips.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button className="crm-apply-btn" onClick={applyDates}>
+                Apply Date Range to YouTube Studio & Graphs
+              </button>
+              <button
+                type="button"
+                className="crm-btn crm-btn-cancel"
+                onClick={() => {
+                  setDateDraft({
+                    anchorDate: '2026-08-12',
+                    startDate: '2026-07-16',
+                    endDate: '2026-08-12',
+                    preset: 'last28'
+                  });
+                }}
+              >
+                🔄 Reset to Jul 16 – Aug 12, 2026
               </button>
             </div>
           </div>

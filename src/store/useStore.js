@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { SpreadsheetDataService } from '../services/SpreadsheetDataService';
-import { InsforgeService, parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService';
+import { SpreadsheetDataService } from '../services/SpreadsheetDataService.js';
+import { InsforgeService, parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService.js';
 import {
   CHANNEL_BENCHMARKS,
   PROCESSED_VIDEOS,
@@ -10,9 +10,12 @@ import {
   aggregateMetrics,
   getTrafficSources,
   getAudienceBreakdown,
+  generateDailyTimeSeries,
   generateRealtimeDataset,
-  tickRealtimeData
-} from '../engine/AnalyticsSimulationEngine';
+  tickRealtimeData,
+  formatDateRangeText,
+  formatSingleDate
+} from '../engine/AnalyticsSimulationEngine.js';
 
 export const formatINR = (val) => {
   if (val === null || val === undefined) return '₹0.00';
@@ -55,8 +58,9 @@ export const fmtS = (s) => {
   return `${prefix}${num.toLocaleString('en-IN')}`;
 };
 
-const INITIAL_REALTIME = generateRealtimeDataset();
-const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-07', '2026-08-04');
+const INITIAL_ANCHOR_DATE = '2026-08-12';
+const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
+const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-16', '2026-08-12');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
 
 // Baseline lifetime totals from the original simulation data
@@ -191,9 +195,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
+      simulationAnchorDate: '2026-08-12',
       selectedDateRange: 'last28',
-      customStartDate: '2026-07-07',
-      customEndDate: '2026-08-04',
+      customStartDate: '2026-07-16',
+      customEndDate: '2026-08-12',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -275,11 +280,34 @@ export const useStore = create(
 
       // Date range changer
       setDateRange: (rangeKey, customStart = null, customEnd = null) => {
-        set(() => {
-          const updates = { selectedDateRange: rangeKey };
+        set(state => {
+          const updates = { 
+            selectedDateRange: rangeKey,
+            dateRangeVersion: (state.dateRangeVersion || 0) + 1
+          };
           if (customStart) updates.customStartDate = customStart;
           if (customEnd) updates.customEndDate = customEnd;
           return updates;
+        });
+      },
+
+      // Set simulation anchor date (e.g. '2026-08-12') and update date ranges
+      setSimulationAnchorDate: (anchorDate, customStart = null, customEnd = null) => {
+        set(state => {
+          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-12';
+          let startStr = customStart;
+          if (!startStr) {
+            const d = new Date(`${cleanAnchor}T00:00:00Z`);
+            d.setUTCDate(d.getUTCDate() - 27);
+            startStr = d.toISOString().split('T')[0];
+          }
+          const endStr = customEnd ? customEnd : cleanAnchor;
+          return {
+            simulationAnchorDate: cleanAnchor,
+            customStartDate: startStr,
+            customEndDate: endStr,
+            dateRangeVersion: (state.dateRangeVersion || 0) + 1
+          };
         });
       },
 
@@ -294,56 +322,54 @@ export const useStore = create(
       getAnalyticsForRange: (rangeKey = null, videoId = null) => {
         const state = get();
         const activeKey = rangeKey || state.selectedDateRange;
-        
-        let startStr = '2026-07-07';
-        let endStr = '2026-08-04';
-        const today = new Date('2026-08-04T00:00:00Z');
+        const anchorDateStr = state.simulationAnchorDate || '2026-08-12';
+        const today = new Date(anchorDateStr.includes('T') ? anchorDateStr : `${anchorDateStr}T00:00:00Z`);
 
         const formatDate = (d) => d.toISOString().split('T')[0];
+        const subDays = (d, count) => {
+          const res = new Date(d);
+          res.setUTCDate(res.getUTCDate() - count);
+          return res;
+        };
+
+        const todayStr = formatDate(today);
+        let startStr = '2026-07-16';
+        let endStr = todayStr;
 
         if (activeKey === 'today') {
-          startStr = '2026-08-04';
-          endStr = '2026-08-04';
+          startStr = todayStr;
+          endStr = todayStr;
         } else if (activeKey === 'first24') {
-          startStr = '2026-08-03';
-          endStr = '2026-08-04';
+          startStr = formatDate(subDays(today, 1));
+          endStr = todayStr;
         } else if (activeKey === 'yesterday') {
-          const y = new Date(today);
-          y.setDate(y.getDate() - 1);
-          startStr = formatDate(y);
-          endStr = formatDate(y);
+          const y = formatDate(subDays(today, 1));
+          startStr = y;
+          endStr = y;
         } else if (activeKey === 'last7') {
-          const s = new Date(today);
-          s.setDate(s.getDate() - 6);
-          startStr = formatDate(s);
-          endStr = formatDate(today);
+          startStr = formatDate(subDays(today, 6));
+          endStr = todayStr;
         } else if (activeKey === 'last28') {
-          const s = new Date(today);
-          s.setDate(s.getDate() - 27);
-          startStr = formatDate(s);
-          endStr = formatDate(today);
+          startStr = state.customStartDate && state.customEndDate === todayStr ? state.customStartDate : formatDate(subDays(today, 27));
+          endStr = todayStr;
         } else if (activeKey === 'last90') {
-          const s = new Date(today);
-          s.setDate(s.getDate() - 89);
-          startStr = formatDate(s);
-          endStr = formatDate(today);
+          startStr = formatDate(subDays(today, 89));
+          endStr = todayStr;
         } else if (activeKey === '365') {
-          const s = new Date(today);
-          s.setDate(s.getDate() - 364);
-          startStr = formatDate(s);
-          endStr = formatDate(today);
+          startStr = formatDate(subDays(today, 364));
+          endStr = todayStr;
         } else if (activeKey === 'lifetime' || activeKey === 'since_published') {
           startStr = '2025-08-01';
-          endStr = '2026-08-04';
+          endStr = todayStr;
         } else if (activeKey === '2026') {
           startStr = '2026-01-01';
-          endStr = '2026-08-04';
+          endStr = todayStr;
         } else if (activeKey === '2025') {
           startStr = '2025-01-01';
           endStr = '2025-12-31';
         } else if (activeKey === 'august') {
           startStr = '2026-08-01';
-          endStr = '2026-08-04';
+          endStr = todayStr > '2026-08-31' ? '2026-08-31' : todayStr;
         } else if (activeKey === 'july') {
           startStr = '2026-07-01';
           endStr = '2026-07-31';
@@ -351,12 +377,16 @@ export const useStore = create(
           startStr = '2026-06-01';
           endStr = '2026-06-30';
         } else if (activeKey === 'custom') {
-          startStr = state.customStartDate || '2026-07-07';
-          endStr = state.customEndDate || '2026-08-04';
+          startStr = state.customStartDate || formatDate(subDays(today, 27));
+          endStr = state.customEndDate || todayStr;
         }
 
-        const filteredDaily = filterDailyMetricsByRange(DAILY_SERIES, startStr, endStr);
+        // Dynamically generate daily time series ending at anchorDateStr so that
+        // ANY date set in CRM (e.g. 2026-08-14, 2026-09-01, 2026-05-10) has complete, valid daily metrics
+        const dynamicDailySeries = generateDailyTimeSeries(365, anchorDateStr);
+        const filteredDaily = filterDailyMetricsByRange(dynamicDailySeries, startStr, endStr);
         const agg = aggregateMetrics(filteredDaily, videoId);
+        const formattedDateRange = formatDateRangeText(startStr, endStr);
 
         // Per-video analytics: use the video's actual stored metrics directly
         if (videoId) {
@@ -407,7 +437,7 @@ export const useStore = create(
           });
 
           return {
-            dateRangeLabel: `${startStr} – ${endStr}`,
+            dateRangeLabel: formattedDateRange,
             daily: scaledDaily,
             aggregated: {
               ...agg,
@@ -490,7 +520,7 @@ export const useStore = create(
         });
 
         return {
-          dateRangeLabel: `${startStr} – ${endStr}`,
+          dateRangeLabel: formattedDateRange,
           daily: scaledDaily,
           aggregated: {
             ...agg,
@@ -720,7 +750,14 @@ export const useStore = create(
             const netSubs = subsGained - subsLost;
             const thumbnail = updates.thumbnail !== undefined ? updates.thumbnail : v.thumbnail;
 
-            // Handle Per-Video Average View Timing (AVD)
+            // Handle Video Duration & Average View Timing (AVD)
+            const durationSecs = updates.durationSecs !== undefined
+              ? Number(updates.durationSecs)
+              : (updates.duration !== undefined ? parseAvdToSeconds(updates.duration, v.durationSecs || 618) : (v.durationSecs || 618));
+            const duration = updates.duration !== undefined
+              ? updates.duration
+              : (updates.durationSecs !== undefined ? formatSecondsToAvd(durationSecs) : (v.duration || formatSecondsToAvd(durationSecs)));
+
             const avgViewDurationSecs = updates.avgViewDurationSecs !== undefined
               ? Number(updates.avgViewDurationSecs)
               : (updates.avgViewDuration !== undefined ? parseAvdToSeconds(updates.avgViewDuration, v.avgViewDurationSecs || 105) : (v.avgViewDurationSecs || 105));
@@ -732,6 +769,8 @@ export const useStore = create(
             return {
               ...merged,
               thumbnail,
+              duration,
+              durationSecs,
               rpm,
               views,
               revenue,
@@ -951,7 +990,7 @@ export const useStore = create(
     }),
     {
       name: 'yt-studio-analytics-v2',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
           if (state.channelInfo) {
@@ -978,6 +1017,10 @@ export const useStore = create(
         settings: state.settings,
         spreadsheetConfig: state.spreadsheetConfig,
         selectedDateRange: state.selectedDateRange,
+        simulationAnchorDate: state.simulationAnchorDate,
+        customStartDate: state.customStartDate,
+        customEndDate: state.customEndDate,
+        dateRangeVersion: state.dateRangeVersion,
         hasCrmOverrides: state.hasCrmOverrides,
         channelInfo: state.channelInfo,
         videos: state.videos

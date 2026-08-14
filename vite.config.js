@@ -11,7 +11,6 @@ export default defineConfig({
       'studio.youtube./asdfsqww/efwer1qwrwe/rrwqe/rweqcvrewwqr/eecrretetqlocal',
       'localhost'
     ],
-    allowedHosts: ['studio.youtube./asdfsqww/efwer1qwrwe/rrwqe/rweqcvrewwqr/eecrretetqlocal', 'localhost'],
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
