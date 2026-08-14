@@ -3,7 +3,7 @@ export const mockVideos = [
     id: "v1",
     title: "Building a SaaS from scratch in 24 hours",
     description: "Watch me build a full SaaS product in 24 hours! #programming #saas",
-    thumbnail: "/thumbnails/1.webp",
+    thumbnail: "/thumbnails/latest_video.png",
     visibility: "Public",
     restrictions: "None",
     date: "2026-07-25",

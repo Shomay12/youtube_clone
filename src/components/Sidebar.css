@@ -5,9 +5,12 @@
   flex-direction: column;
   border-right: 1px solid var(--border-color);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   height: 100%;
   transition: width 0.2s ease-in-out;
   flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .sidebar.collapsed {

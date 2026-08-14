@@ -26,19 +26,27 @@ export const CHANNEL_BENCHMARKS = {
 export const RAW_VIDEOS = [
   {
     id: 'VID001',
-    title: 'Instagram Viral Motu Patlu Wali Ai Video Kaise Banaye | Trending motu patlu video kaise banaye',
-    description: 'Trending Motu Patlu AI Video Generation guide.',
-    duration: '10:18',
-    durationSecs: 618,
-    avgViewDuration: '1:45',
-    avgViewDurationSecs: 105,
-    views: 1543000,
+    title: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
+    description: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
+    duration: '15:20',
+    durationSecs: 920,
+    avgViewDuration: '11:27',
+    avgViewDurationSecs: 687,
+    views: 274365,
     ctr: 8.9,
-    rpm: 34.10,
-    cpm: 58.65,
-    publishDate: '2026-02-14',
-    thumbnail: '/thumbnails/1.webp',
-    category: 'Entertainment'
+    rpm: 435.066426,
+    cpm: 791.03,
+    publishDate: '2026-07-17',
+    thumbnail: '/thumbnails/latest_video.png',
+    category: 'Entertainment',
+    watchTimeHrs: 52346,
+    revenue: 119367,
+    revenueFormatted: '₹1,19,367.00',
+    watchTimeHrsFormatted: '52.3K hrs',
+    subscribersGained: 4946,
+    subscribersLost: 0,
+    netSubscribers: 4946,
+    viewsFormatted: '274.4K'
   },
   {
     id: 'VID002',
@@ -188,28 +196,29 @@ export const RAW_VIDEOS = [
 
 // Calculate derived stats for raw videos ensuring internal consistency
 export const PROCESSED_VIDEOS = RAW_VIDEOS.map(v => {
-  const impressions = Math.round(v.views / (v.ctr / 100));
-  const watchTimeHrs = parseFloat((v.views * (v.avgViewDurationSecs / 3600)).toFixed(1));
-  const revenue = parseFloat(((v.views / 1000) * v.rpm).toFixed(2));
-  const likes = Math.round(v.views * 0.046);
-  const comments = Math.round(v.views * 0.0034);
-  const shares = Math.round(v.views * 0.0082);
-  const subscribersGained = Math.round(v.views * 0.014);
-  const subscribersLost = Math.round(subscribersGained * 0.12);
+  const impressions = v.impressions || Math.round(v.views / (v.ctr / 100));
+  const watchTimeHrs = v.watchTimeHrs !== undefined ? Number(v.watchTimeHrs) : parseFloat((v.views * (v.avgViewDurationSecs / 3600)).toFixed(1));
+  const revenue = v.revenue !== undefined ? Number(v.revenue) : parseFloat(((v.views / 1000) * v.rpm).toFixed(2));
+  const likes = v.likes || Math.round(v.views * 0.046);
+  const comments = v.comments || Math.round(v.views * 0.0034);
+  const shares = v.shares || Math.round(v.views * 0.0082);
+  const subscribersGained = v.subscribersGained !== undefined ? Number(v.subscribersGained) : Math.round(v.views * 0.014);
+  const subscribersLost = v.subscribersLost !== undefined ? Number(v.subscribersLost) : 0;
+  const netSubscribers = v.netSubscribers !== undefined ? Number(v.netSubscribers) : subscribersGained;
 
   return {
     ...v,
     impressions,
     watchTimeHrs,
     revenue,
-    revenueFormatted: `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    viewsFormatted: v.views >= 1000000 ? `${(v.views / 1000000).toFixed(1)}M` : `${(v.views / 1000).toFixed(0)}K`,
+    revenueFormatted: v.revenueFormatted || `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    viewsFormatted: v.viewsFormatted || (v.views >= 1000000 ? `${(v.views / 1000000).toFixed(1)}M` : `${(v.views / 1000).toFixed(1)}K`),
     likes,
     comments,
     shares,
     subscribersGained,
     subscribersLost,
-    netSubscribers: subscribersGained - subscribersLost
+    netSubscribers
   };
 });
 
@@ -250,13 +259,13 @@ export function formatDateRangeText(startDateInput, endDateInput) {
     }
     return `${sMonth} ${sDay} – ${eMonth} ${eDay}, ${sYear}`;
   }
-  return `${sMonth} ${sDay}, ${sYear} – ${eMonth} ${eDay}, ${eYear}`;
+  return `${sMonth} ${sDay}, ${sYear} – ${eMonth} ${eDay}, ${sYear}`;
 }
 
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-12') {
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-13') {
   const today = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T00:00:00Z`);
   const dailyData = [];
 

@@ -113,6 +113,9 @@
   width: 100%;
   overflow-x: auto;
   min-height: 400px;
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .content-table {

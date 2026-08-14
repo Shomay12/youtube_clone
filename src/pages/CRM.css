@@ -4,9 +4,12 @@
 .crm-root {
   display: flex;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   background: #0a0a0f;
   color: #e2e8f0;
   font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── Sidebar ─── */
@@ -19,10 +22,14 @@
   flex-direction: column;
   padding: 0 0 24px;
   flex-shrink: 0;
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .crm-logo {
@@ -317,7 +324,7 @@
 }
 
 /* ─── Fields & Inputs ─── */
-.crm-field { display: flex; flex-direction: column; gap: 6px; }
+.crm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .crm-field-label { font-size: 12px; font-weight: 500; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
 .crm-unit { background: #1e1e3a; color: #a78bfa; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
 .crm-input {
@@ -326,11 +333,13 @@
   border-radius: 8px;
   color: #e2e8f0;
   font-size: 14px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 9px 12px;
   transition: border-color 0.15s;
   width: 100%;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .crm-input:focus { outline: none; border-color: #7c3aed; }
 
@@ -357,9 +366,11 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   transition: opacity 0.15s, transform 0.1s;
   align-self: flex-start;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .crm-apply-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .crm-apply-btn:active { transform: translateY(0); }
@@ -373,9 +384,11 @@
   border-radius: 10px;
   color: #e2e8f0;
   font-size: 14px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 10px 16px;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .crm-search:focus { outline: none; border-color: #7c3aed; }
 .crm-search::placeholder { color: #475569; }
@@ -386,6 +399,9 @@
   border: 1px solid #1e1e3a;
   overflow: hidden;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 .crm-table {
   width: 100%;
@@ -429,9 +445,11 @@
   border-radius: 6px;
   color: #e2e8f0;
   font-size: 13px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 5px 8px;
   width: 90px;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .crm-inline-input:focus { outline: none; }
 

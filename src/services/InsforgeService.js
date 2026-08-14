@@ -110,7 +110,9 @@ export const InsforgeService = {
           const revenue = v.revenue != null ? Number(v.revenue) : (views / 1000) * rpm;
           const avgViewDurationSecs = Number(v.avg_view_duration_secs) || parseAvdToSeconds(v.avg_view_duration, 105);
           const avgViewDuration = v.avg_view_duration || formatSecondsToAvd(avgViewDurationSecs);
-          const watchTimeHrs = parseFloat(((views * avgViewDurationSecs) / 3600).toFixed(1));
+          const watchTimeHrs = (v.watch_time_hrs !== undefined && v.watch_time_hrs !== null && Number(v.watch_time_hrs) > 0)
+            ? Number(v.watch_time_hrs)
+            : parseFloat(((views * avgViewDurationSecs) / 3600).toFixed(1));
 
           return {
             id: v.id,
@@ -132,8 +134,8 @@ export const InsforgeService = {
             revenue,
             revenueFormatted: v.revenue_formatted || `₹${revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             subscribersGained: Number(v.subscribers_gained) || Math.round(views * 0.014),
-            subscribersLost: Number(v.subscribers_lost) || Math.round((Number(v.subscribers_gained) || Math.round(views * 0.014)) * 0.12),
-            netSubscribers: Number(v.net_subscribers) || ((Number(v.subscribers_gained) || 0) - (Number(v.subscribers_lost) || 0)),
+            subscribersLost: Number(v.subscribers_lost) || 0,
+            netSubscribers: (Number(v.net_subscribers) && Number(v.net_subscribers) > 0) ? Number(v.net_subscribers) : (Number(v.subscribers_gained) || Math.round(views * 0.014)),
             watchTimeHrs,
             impressions: Number(v.impressions) || Math.round(views / ((Number(v.ctr) || 8.90) / 100)),
             visibility: v.visibility || 'Public',
@@ -234,8 +236,8 @@ export const InsforgeService = {
         revenue,
         revenue_formatted: videoData.revenueFormatted || `₹${revenue.toFixed(2)}`,
         subscribers_gained: Number(videoData.subscribersGained) || Math.round(views * 0.014),
-        subscribers_lost: Number(videoData.subscribersLost) || Math.round((Number(videoData.subscribersGained) || 1000) * 0.12),
-        net_subscribers: (Number(videoData.subscribersGained) || 0) - (Number(videoData.subscribersLost) || 0),
+        subscribers_lost: Number(videoData.subscribersLost) || 0,
+        net_subscribers: (Number(videoData.netSubscribers) && Number(videoData.netSubscribers) > 0) ? Number(videoData.netSubscribers) : (Number(videoData.subscribersGained) || Math.round(views * 0.014)),
         watch_time_hrs: watchTimeHrs,
         impressions: Number(videoData.impressions) || Math.round(views / ((Number(videoData.ctr) || 8.90) / 100)),
         visibility: videoData.visibility || 'Public',
@@ -294,8 +296,8 @@ export const InsforgeService = {
           revenue,
           revenue_formatted: v.revenueFormatted || `₹${revenue.toFixed(2)}`,
           subscribers_gained: Number(v.subscribersGained) || Math.round(views * 0.014),
-          subscribers_lost: Number(v.subscribersLost) || Math.round((Number(v.subscribersGained) || 1000) * 0.12),
-          net_subscribers: (Number(v.subscribersGained) || 0) - (Number(v.subscribersLost) || 0),
+          subscribers_lost: Number(v.subscribersLost) || 0,
+          net_subscribers: (Number(v.netSubscribers) && Number(v.netSubscribers) > 0) ? Number(v.netSubscribers) : (Number(v.subscribersGained) || Math.round(views * 0.014)),
           watch_time_hrs: watchTimeHrs,
           impressions: Number(v.impressions) || Math.round(views / ((Number(v.ctr) || 8.90) / 100)),
           visibility: v.visibility || 'Public',

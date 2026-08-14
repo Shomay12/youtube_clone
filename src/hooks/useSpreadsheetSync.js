@@ -29,6 +29,46 @@ export function useSpreadsheetSync() {
   }, [loadFromDatabase, loadFromSpreadsheet]);
 
   useEffect(() => {
+    // Cross-tab real-time sync for CRM updates
+    const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('yt-studio-sync') : null;
+    if (syncChannel) {
+      syncChannel.onmessage = (msg) => {
+        if (msg.data?.type === 'CRM_UPDATED') {
+          if (useStore.persist?.rehydrate) {
+            useStore.persist.rehydrate();
+          }
+          useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+        }
+      };
+    }
+
+    const handleStorage = (e) => {
+      if (e.key && e.key.startsWith('yt-studio-analytics')) {
+        if (useStore.persist?.rehydrate) {
+          useStore.persist.rehydrate();
+        }
+        useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+      }
+    };
+
+    const handleFocus = () => {
+      if (useStore.persist?.rehydrate) {
+        useStore.persist.rehydrate();
+      }
+      useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      if (syncChannel) syncChannel.close();
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;

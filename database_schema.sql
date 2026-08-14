@@ -179,12 +179,12 @@ INSERT INTO crm_videos (
 ) VALUES
 (
     'VID001', 'UCqpdVWIzEQUcbf4pAxlneOQ',
-    'Instagram Viral Motu Patlu Wali Ai Video Kaise Banaye | Trending motu patlu video kaise banaye',
-    'Trending Motu Patlu AI Video Generation guide.',
-    '/thumbnails/1.webp', '10:18', 618,
-    '1:45', 105, 1543000, '1.5M', 70978, 5246,
-    34.10, 58.65, 8.90, 52616.30, '₹52,616.30', 21602, 2592, 19010,
-    45.00, 17337078, 'Public', true, 'None', 'Entertainment', '2026-02-14', 1
+    'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
+    'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
+    '/thumbnails/latest_video.png', '15:20', 920,
+    '11:27', 687, 274365, '274.4K', 12620, 932,
+    435.07, 791.03, 8.90, 119367.00, '₹1,19,367.00', 4946, 0, 4946,
+    52346.00, 3082752, 'Public', true, 'None', 'Entertainment', '2026-07-17', 1
 ),
 (
     'VID002', 'UCqpdVWIzEQUcbf4pAxlneOQ',

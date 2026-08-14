@@ -202,16 +202,20 @@ export default function CRM() {
       const avdStr = activeVideo.avgViewDuration || formatSecondsToAvd(avdSecs);
       const durSecs = activeVideo.durationSecs || parseAvdToSeconds(activeVideo.duration, 618);
       const durStr = activeVideo.duration || formatSecondsToAvd(durSecs);
+      const vViews = activeVideo.views || 0;
+      const vRpm = activeVideo.rpm || 33.64;
+      const vRev = activeVideo.revenue != null ? Number(activeVideo.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
       setSelectedVideoDraft({
         thumbnail: activeVideo.thumbnail || '/thumbnails/1.webp',
         duration: durStr,
         durationSecs: durSecs,
         subscribersGained: activeVideo.subscribersGained !== undefined ? activeVideo.subscribersGained : Math.round((activeVideo.views || 10000) * 0.014),
         subscribersLost: activeVideo.subscribersLost !== undefined ? activeVideo.subscribersLost : Math.round(((activeVideo.subscribersGained || 1000) * 0.12)),
-        views: activeVideo.views || 0,
+        views: vViews,
+        revenue: vRev,
         likes: activeVideo.likes || 0,
         comments: activeVideo.comments || 0,
-        rpm: activeVideo.rpm || 33.64,
+        rpm: vRpm,
         avgViewDuration: avdStr,
         avgViewDurationSecs: avdSecs,
         title: activeVideo.title || ''
@@ -225,10 +229,10 @@ export default function CRM() {
   );
 
   const totalRevenue = useMemo(() =>
-    videos.reduce((acc, v) => acc + (v.revenue || 0), 0), [videos]);
+    videos.reduce((acc, v) => acc + (v.revenue != null ? Number(v.revenue) : (((Number(v.views) || 0) / 1000) * (Number(v.rpm) || 33.64))), 0), [videos]);
 
   const totalViews = useMemo(() =>
-    videos.reduce((acc, v) => acc + (v.views || 0), 0), [videos]);
+    videos.reduce((acc, v) => acc + (Number(v.views) || 0), 0), [videos]);
 
   const avgRPM = useMemo(() => {
     const rpms = videos.filter(v => v.rpm).map(v => v.rpm);
@@ -241,16 +245,20 @@ export default function CRM() {
     const avdStr = v.avgViewDuration || formatSecondsToAvd(avdSecs);
     const durSecs = v.durationSecs || parseAvdToSeconds(v.duration, 618);
     const durStr = v.duration || formatSecondsToAvd(durSecs);
+    const vViews = Number(v.views) || 0;
+    const vRpm = Number(v.rpm) || 33.64;
+    const vRev = v.revenue != null ? Number(v.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
     setEditBuf({
-      views: v.views,
-      likes: v.likes,
-      comments: v.comments,
-      rpm: v.rpm || 33.64,
+      views: vViews,
+      likes: v.likes || 0,
+      comments: v.comments || 0,
+      rpm: vRpm,
+      revenue: vRev,
       duration: durStr,
       durationSecs: durSecs,
       avgViewDuration: avdStr,
       avgViewDurationSecs: avdSecs,
-      subscribersGained: v.subscribersGained !== undefined ? v.subscribersGained : Math.round(v.views * 0.014),
+      subscribersGained: v.subscribersGained !== undefined ? v.subscribersGained : Math.round(vViews * 0.014),
       thumbnail: v.thumbnail
     });
   }
@@ -264,33 +272,64 @@ export default function CRM() {
       ? Number(editBuf.durationSecs)
       : parseAvdToSeconds(editBuf.duration, 618);
     const durStr = editBuf.duration || formatSecondsToAvd(durSecs);
+    const vViews = Number(editBuf.views) || 0;
+    const vRpm = Number(editBuf.rpm) || 33.64;
+    const vRev = editBuf.revenue !== undefined ? Number(editBuf.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
+    const vWatchTime = parseFloat(((vViews * avdSecs) / 3600).toFixed(1));
+    const vSubsGained = Number(editBuf.subscribersGained) || 0;
 
     const payload = {
       ...editBuf,
+      views: vViews,
+      revenue: vRev,
+      rpm: vRpm,
       duration: durStr,
       durationSecs: durSecs,
       avgViewDuration: avdStr,
-      avgViewDurationSecs: avdSecs
+      avgViewDurationSecs: avdSecs,
+      watchTimeHrs: vWatchTime,
+      watchTimeHrsFormatted: fmtW(vWatchTime),
+      subscribersGained: vSubsGained,
+      subscribersLost: 0,
+      netSubscribers: vSubsGained,
+      subscribersNet: vSubsGained,
+      subscribersNetFormatted: fmtS(vSubsGained),
+      revenueFormatted: formatINR(vRev),
+      viewsFormatted: fmtV(vViews)
     };
     updateVideoMetrics(id, payload);
     setEditingId(null);
+    broadcastSync();
     showToast('Video metrics, duration & thumbnail updated ✓', 'success');
   }
 
   function cancelEdit() { setEditingId(null); }
 
+  const broadcastSync = () => {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('yt-studio-sync');
+        bc.postMessage({ type: 'CRM_UPDATED', timestamp: Date.now() });
+        bc.close();
+      }
+    } catch {}
+  };
+
   function applyChannel() {
     crmUpdateChannelMetrics(channelDraft);
+    broadcastSync();
     showToast('Channel metrics updated ✓', 'success');
   }
 
   function applyBulkRPM() {
     bulkSetVideoRPM(bulkRPM);
+    broadcastSync();
     showToast(`RPM set to ₹${bulkRPM} for all videos ✓`, 'success');
   }
 
   function applyBulkMultiply() {
     bulkMultiplyViews(bulkFactor);
+    broadcastSync();
     showToast(`All video views multiplied by ${bulkFactor}× ✓`, 'success');
   }
 
@@ -300,14 +339,33 @@ export default function CRM() {
     const avdStr = selectedVideoDraft.avgViewDuration || formatSecondsToAvd(avdSecs);
     const durSecs = selectedVideoDraft.durationSecs || parseAvdToSeconds(selectedVideoDraft.duration, 618);
     const durStr = selectedVideoDraft.duration || formatSecondsToAvd(durSecs);
+    const vViews = Number(selectedVideoDraft.views) || 0;
+    const vRpm = Number(selectedVideoDraft.rpm) || 33.64;
+    const vRev = selectedVideoDraft.revenue !== undefined ? Number(selectedVideoDraft.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
+    const vWatchTime = parseFloat(((vViews * avdSecs) / 3600).toFixed(1));
+    const vSubsGained = Number(selectedVideoDraft.subscribersGained) || 0;
     const payload = {
       ...selectedVideoDraft,
+      views: vViews,
+      revenue: vRev,
+      rpm: vRpm,
       duration: durStr,
       durationSecs: durSecs,
       avgViewDuration: avdStr,
-      avgViewDurationSecs: avdSecs
+      avgViewDurationSecs: avdSecs,
+      watchTimeHrs: vWatchTime,
+      watchTimeHrsFormatted: fmtW(vWatchTime),
+      subscribersGained: vSubsGained,
+      subscribersLost: 0,
+      netSubscribers: vSubsGained,
+      subscribersNet: vSubsGained,
+      subscribersNetFormatted: fmtS(vSubsGained),
+      subscribersGainedFormatted: fmtS(vSubsGained),
+      revenueFormatted: formatINR(vRev),
+      viewsFormatted: fmtV(vViews)
     };
     updateVideoMetrics(activeVideo.id, payload);
+    broadcastSync();
     showToast(`Video "${activeVideo.title?.slice(0, 24)}…" updated ✓ Reflecting across all Studio pages.`, 'success');
   }
 
@@ -315,6 +373,7 @@ export default function CRM() {
     setSimulationAnchorDate(dateDraft.anchorDate, dateDraft.startDate, dateDraft.endDate);
     setDateRange(dateDraft.preset, dateDraft.startDate, dateDraft.endDate);
     const label = formatDateRangeText(dateDraft.startDate, dateDraft.endDate);
+    broadcastSync();
     showToast(`Date range set to "${label}" across all graphs ✓`, 'success');
   }
 
@@ -614,11 +673,11 @@ export default function CRM() {
                       value={selectedVideoDraft.subscribersGained}
                       onChange={v => {
                         const gained = Number(v);
-                        const lost = Math.round(gained * 0.12);
                         setSelectedVideoDraft(d => ({
                           ...d,
                           subscribersGained: gained,
-                          subscribersLost: lost
+                          netSubscribers: gained,
+                          subscribersLost: 0
                         }));
                       }}
                       min={0}
@@ -638,11 +697,39 @@ export default function CRM() {
                     <CRMInput
                       label="Video RPM (₹)"
                       value={selectedVideoDraft.rpm}
-                      onChange={v => setSelectedVideoDraft(d => ({ ...d, rpm: v }))}
+                      onChange={v => {
+                        const rpmVal = Number(v) || 0;
+                        const viewsVal = Number(selectedVideoDraft.views) || 0;
+                        setSelectedVideoDraft(d => ({
+                          ...d,
+                          rpm: rpmVal,
+                          revenue: parseFloat(((viewsVal / 1000) * rpmVal).toFixed(2))
+                        }));
+                      }}
                       min={0}
                       step={0.1}
                       unit="₹"
                     />
+                    <CRMInput
+                      label="Estimated Revenue (₹)"
+                      value={selectedVideoDraft.revenue !== undefined ? selectedVideoDraft.revenue : parseFloat((((Number(selectedVideoDraft.views) || 0) / 1000) * (Number(selectedVideoDraft.rpm) || 33.64)).toFixed(2))}
+                      onChange={v => {
+                        const revVal = Number(v) || 0;
+                        const viewsVal = Number(selectedVideoDraft.views) || 0;
+                        const calcRpm = viewsVal > 0 ? parseFloat(((revVal / (viewsVal / 1000))).toFixed(4)) : (selectedVideoDraft.rpm || 33.64);
+                        setSelectedVideoDraft(d => ({
+                          ...d,
+                          revenue: revVal,
+                          rpm: calcRpm
+                        }));
+                      }}
+                      min={0}
+                      step={100}
+                      unit="₹"
+                    />
+                  </div>
+
+                  <div className="crm-grid-2" style={{ marginTop: 8 }}>
                     <CRMInput
                       label="Likes Count"
                       value={selectedVideoDraft.likes}

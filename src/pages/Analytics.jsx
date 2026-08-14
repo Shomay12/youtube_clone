@@ -470,7 +470,7 @@ const Analytics = () => {
     return [...videos].map(v => {
       const views = Number(v.views) || 0;
       const rpm = Number(v.rpm) || 33.64;
-      const calculatedRevenue = (views / 1000) * rpm;
+      const calculatedRevenue = v.revenue != null ? Number(v.revenue) : (views / 1000) * rpm;
       return {
         ...v,
         calculatedRevenue,
@@ -633,7 +633,7 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Subscribers</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.subscribersNetFormatted || '+214'}</span>
+                      <span>{fmtS(isVideoMode ? (currentVideo.subscribersGained !== undefined ? currentVideo.subscribersGained : (currentVideo.netSubscribers !== undefined ? currentVideo.netSubscribers : aggregated.subscribersNet)) : (aggregated.subscribersNet || aggregated.subscribersGained || channelInfo.subscribersGainedLast28Days || 214))}</span>
                     </div>
                     <div className="metric-sub-label">In this period</div>
                   </div>
@@ -1091,11 +1091,11 @@ const Analytics = () => {
 
               <StudioCard title="Content suggesting this video" subtitle="Views · Since published">
                 <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px' }}>Proportion of your total traffic: <strong>0.8%</strong></div>
-                <FormatDistributionRow label="Motu Patlu AI Video Kaise Banaye | Motu Patlu Tr..." value="4.4%" maxVal={10} barColor="#818cf8" />
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="4.2%" maxVal={10} barColor="#818cf8" />
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="4.2%" maxVal={10} barColor="#818cf8" />
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="2.5%" maxVal={10} barColor="#818cf8" />
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali AI Video Kaise B..." value="1.9%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label={currentVideo.title ? (currentVideo.title.length > 45 ? currentVideo.title.substring(0, 45) + "..." : currentVideo.title) : "This video"} value="4.4%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Why Is There Still Another Woman in His Life?..." value="4.2%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Signs He Truly Loves You Deeply..." value="4.2%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Relationship Truths You Need To Know..." value="2.5%" maxVal={10} barColor="#818cf8" />
+                <FormatDistributionRow label="Understanding Men in Difficult Relationships..." value="1.9%" maxVal={10} barColor="#818cf8" />
                 <button className="see-more-btn margin-top-16">See more</button>
               </StudioCard>
 
@@ -1278,13 +1278,13 @@ const Analytics = () => {
 
             <div className="audience-col">
               <StudioCard title="Likes (vs. dislikes)" subtitle="Since published">
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali Ai Video Kaise B..." value="96.5%" maxVal={100} barColor="#ec4899" />
+                <FormatDistributionRow label={currentVideo.title ? (currentVideo.title.length > 45 ? currentVideo.title.substring(0, 45) + "..." : currentVideo.title) : "This video"} value="96.5%" maxVal={100} barColor="#ec4899" />
                 <FormatDistributionRow label="Channel average" value="97.7%" maxVal={100} barColor="#717171" />
                 <button className="see-more-btn margin-top-16">See more</button>
               </StudioCard>
 
               <StudioCard title="End screen element click rate" subtitle="Since uploaded (lifetime)">
-                <FormatDistributionRow label="Instagram Viral Motu Patlu Wali Ai Video Kaise B..." value="1.0%" maxVal={5} barColor="#ec4899" />
+                <FormatDistributionRow label={currentVideo.title ? (currentVideo.title.length > 45 ? currentVideo.title.substring(0, 45) + "..." : currentVideo.title) : "This video"} value="1.0%" maxVal={5} barColor="#ec4899" />
                 <FormatDistributionRow label="Channel average" value="1.7%" maxVal={5} barColor="#717171" />
                 <button className="see-more-btn margin-top-16">See more</button>
               </StudioCard>
@@ -1536,7 +1536,7 @@ const Analytics = () => {
               <div className="hero-metric-item">
                 <span className="hero-label">Subscribers</span>
                 <span className="hero-val-row">
-                  {aggregated.subscribersNetFormatted} <span className="gray-arrow-small">↓</span>
+                  {fmtS(isVideoMode ? (currentVideo.subscribersGained !== undefined ? currentVideo.subscribersGained : (currentVideo.netSubscribers !== undefined ? currentVideo.netSubscribers : aggregated.subscribersNet)) : (aggregated.subscribersNet || aggregated.subscribersGained || channelInfo.subscribersGainedLast28Days || 214))} <span className="gray-arrow-small">↓</span>
                   <span className="hero-subtext">In this period</span>
                 </span>
               </div>
