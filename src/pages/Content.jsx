@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { VIDEO_ID_TO_DATE, TITLE_TO_SCHEDULE_DATE, VIDEO_PUBLISH_SCHEDULE } from '../engine/AnalyticsSimulationEngine';
 import './Content.css';
 
 const TABS = [
@@ -18,8 +19,15 @@ const TABS = [
 ];
 
 function formatContentDate(dStr) {
-  if (!dStr) return 'Aug 12, 2026';
+  if (!dStr) return 'Aug 16, 2026';
   if (/^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}$/.test(dStr)) return dStr;
+  if (/^\d{4}-\d{2}-\d{2}/.test(dStr)) {
+    const [y, m, d] = dStr.split('T')[0].split('-').map(Number);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${months[m - 1]} ${d}, ${y}`;
+    }
+  }
   const d = new Date(dStr);
   if (isNaN(d.getTime())) return dStr;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -85,8 +93,33 @@ const Content = () => {
   else if (activeTab === 'Podcasts') currentDataset = podcasts;
   else if (activeTab === 'Posts') currentDataset = [];
 
+  // Prioritize video's live publishDate from CRM/store or strict 4-day gap schedule
+  const normalizedDataset = currentDataset.map((item, idx) => {
+    const scheduledDate = TITLE_TO_SCHEDULE_DATE[item.title] || VIDEO_ID_TO_DATE[item.id] || (activeTab === 'Videos' && VIDEO_PUBLISH_SCHEDULE[idx]) || '2026-08-16';
+    const pubDate = (item.publishDate && (item.publishDate.startsWith('2026-08') || item.publishDate.startsWith('2026-07')))
+      ? item.publishDate
+      : (item.date && (item.date.startsWith('2026-08') || item.date.startsWith('2026-07')) ? item.date : scheduledDate);
+
+    return {
+      ...item,
+      publishDate: pubDate,
+      date: pubDate,
+      sortOrder: item.sortOrder !== undefined ? item.sortOrder : idx + 1
+    };
+  });
+
+  // Sort strictly newest to oldest (descending by publishDate)
+  const sortedDataset = [...normalizedDataset].sort((a, b) => {
+    const dateA = a.publishDate || a.date || '';
+    const dateB = b.publishDate || b.date || '';
+    if (dateA && dateB && dateA !== dateB) {
+      return dateB.localeCompare(dateA); // Descending (Aug 16 first down to Jul 11 last)
+    }
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
+  });
+
   // Apply filters
-  const filteredList = currentDataset.filter(item => {
+  const filteredList = sortedDataset.filter(item => {
     const matchesSearch = item.title?.toLowerCase().includes(filterText.toLowerCase()) || item.description?.toLowerCase().includes(filterText.toLowerCase());
     const matchesVisibility = visibilityFilter === 'All' || item.visibility === visibilityFilter;
     return matchesSearch && matchesVisibility;

@@ -6,6 +6,9 @@ import {
   CHANNEL_BENCHMARKS,
   PROCESSED_VIDEOS,
   DAILY_SERIES,
+  VIDEO_ID_TO_DATE,
+  TITLE_TO_SCHEDULE_DATE,
+  VIDEO_PUBLISH_SCHEDULE,
   filterDailyMetricsByRange,
   aggregateMetrics,
   getTrafficSources,
@@ -58,9 +61,9 @@ export const fmtS = (s) => {
   return `${prefix}${num.toLocaleString('en-IN')}`;
 };
 
-const INITIAL_ANCHOR_DATE = '2026-08-13';
+const INITIAL_ANCHOR_DATE = '2026-08-16';
 const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
-const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-17', '2026-08-13');
+const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-20', '2026-08-16');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
 
 // Baseline lifetime totals from the original simulation data
@@ -156,9 +159,20 @@ const EMPTY_STATE = {
 };
 
 function applySpreadsheetData(data) {
+  const rawList = data.videos && data.videos.length > 0 ? data.videos : EMPTY_STATE.videos;
+  const normalizedVideos = rawList.map((v, i) => {
+    const pubDate = v.publishDate || v.date;
+    return {
+      ...v,
+      publishDate: pubDate,
+      date: pubDate,
+      sortOrder: v.sortOrder !== undefined ? v.sortOrder : i + 1
+    };
+  });
+
   return {
     channelInfo: { ...EMPTY_STATE.channelInfo, ...(data.channelInfo || {}) },
-    videos: data.videos && data.videos.length > 0 ? data.videos : EMPTY_STATE.videos,
+    videos: normalizedVideos,
     shorts: data.shorts || [],
     liveStreams: data.liveStreams || [],
     playlists: data.playlists && data.playlists.length > 0 ? data.playlists : EMPTY_STATE.playlists,
@@ -195,10 +209,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-08-13',
+      simulationAnchorDate: '2026-08-16',
       selectedDateRange: 'last28',
-      customStartDate: '2026-07-17',
-      customEndDate: '2026-08-13',
+      customStartDate: '2026-07-20',
+      customEndDate: '2026-08-16',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -291,10 +305,10 @@ export const useStore = create(
         });
       },
 
-      // Set simulation anchor date (e.g. '2026-08-12') and update date ranges
+      // Set simulation anchor date (e.g. '2026-08-16') and update date ranges
       setSimulationAnchorDate: (anchorDate, customStart = null, customEnd = null) => {
         set(state => {
-          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-12';
+          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-16';
           let startStr = customStart;
           if (!startStr) {
             const d = new Date(`${cleanAnchor}T00:00:00Z`);
@@ -322,7 +336,7 @@ export const useStore = create(
       getAnalyticsForRange: (rangeKey = null, videoId = null) => {
         const state = get();
         const activeKey = rangeKey || state.selectedDateRange;
-        const anchorDateStr = state.simulationAnchorDate || '2026-08-12';
+        const anchorDateStr = state.simulationAnchorDate || '2026-08-16';
         const today = new Date(anchorDateStr.includes('T') ? anchorDateStr : `${anchorDateStr}T00:00:00Z`);
 
         const formatDate = (d) => d.toISOString().split('T')[0];
@@ -333,7 +347,7 @@ export const useStore = create(
         };
 
         const todayStr = formatDate(today);
-        let startStr = '2026-07-16';
+        let startStr = '2026-07-20';
         let endStr = todayStr;
 
         if (activeKey === 'today') {
@@ -414,16 +428,38 @@ export const useStore = create(
           const videoCtr = targetVideo?.ctr ? Number(targetVideo.ctr) : 8.9;
           const videoImpressions = Math.round(videoViews * (100 / (videoCtr || 8.9)));
 
-          const totalViewsInDaily = filteredDaily.reduce((acc, d) => acc + (d.views || 0), 0) || 1;
+          const pubDateStr = (targetVideo?.publishDate && (targetVideo.publishDate.startsWith('2026-08') || targetVideo.publishDate.startsWith('2026-07')))
+            ? targetVideo.publishDate
+            : (TITLE_TO_SCHEDULE_DATE[targetVideo?.title] || VIDEO_ID_TO_DATE[targetVideo?.id] || '2026-08-16');
+
+          // In video analytics, views accumulate in an increasing curve from publish date to today without dipping
+          const activeItems = filteredDaily.filter(d => d.date >= pubDateStr);
+          const numActive = activeItems.length;
+
+          let lastRatio = 0;
+          const ratioMap = new Map();
+
+          activeItems.forEach((d, k) => {
+            const progress = (k + 1) / (numActive || 1);
+            // Concave upward growth curve
+            const baseCurve = Math.pow(progress, 0.72);
+            // Subtle randomness/organic roughness (±2%)
+            const noise = 1.0 + (k === numActive - 1 ? 0 : (0.02 * Math.sin(k * 2.8 + 0.4) - 0.01 * Math.cos(k * 4.1)));
+            let r = k === numActive - 1 ? 1.0 : Math.min(0.99, baseCurve * noise);
+            if (r < lastRatio) r = lastRatio + 0.02; // strictly increasing, no dips
+            lastRatio = r;
+            ratioMap.set(d.date, Math.min(1.0, r));
+          });
 
           const scaledDaily = filteredDaily.map(d => {
-            const dayWeight = (d.views || 0) / totalViewsInDaily;
-            const dViews = Math.round(videoViews * dayWeight);
-            const dRev = parseFloat(((videoRevenue) * dayWeight).toFixed(2));
-            const dWatch = parseFloat(((videoWatchTime) * dayWeight).toFixed(1));
-            const dSubsNet = Math.round(videoSubsNet * dayWeight);
-            const dSubsGained = Math.round(videoSubsGained * dayWeight);
-            const dSubsLost = Math.round(videoSubsLost * dayWeight);
+            const isPublished = d.date >= pubDateStr;
+            const ratio = isPublished ? (ratioMap.get(d.date) || 0) : 0;
+            const dViews = isPublished ? Math.round(videoViews * ratio) : 0;
+            const dRev = isPublished ? parseFloat(((videoRevenue) * ratio).toFixed(2)) : 0;
+            const dWatch = isPublished ? parseFloat(((videoWatchTime) * ratio).toFixed(1)) : 0;
+            const dSubsNet = isPublished ? Math.round(videoSubsNet * ratio) : 0;
+            const dSubsGained = isPublished ? Math.round(videoSubsGained * ratio) : 0;
+            const dSubsLost = isPublished ? Math.round(videoSubsLost * ratio) : 0;
 
             return {
               ...d,
@@ -433,8 +469,8 @@ export const useStore = create(
               subscribersNet: dSubsNet,
               subscribersGained: dSubsGained,
               subscribersLost: dSubsLost,
-              impressions: Math.round(videoImpressions * dayWeight),
-              ctr: videoCtr,
+              impressions: isPublished ? Math.round(videoImpressions * ratio) : 0,
+              ctr: isPublished ? videoCtr : 0,
             };
           });
 
@@ -760,8 +796,13 @@ export const useStore = create(
               ? Number(updates.watchTimeHrs)
               : parseFloat(((views * avgViewDurationSecs) / 3600).toFixed(1));
 
+            // Handle Video Publish Date
+            const publishDate = updates.publishDate !== undefined ? updates.publishDate : (updates.date !== undefined ? updates.date : (v.publishDate || v.date || '2026-08-16'));
+
             return {
               ...merged,
+              publishDate,
+              date: publishDate,
               thumbnail,
               duration,
               durationSecs,
@@ -1008,7 +1049,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v5',
+      name: 'yt-studio-analytics-v11',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1022,11 +1063,18 @@ export const useStore = create(
             state.channelInfo.currency = 'INR';
           }
           if (state.videos && Array.isArray(state.videos)) {
-            state.videos = state.videos.map(v => {
+            const normalized = state.videos.map((v, idx) => {
+              const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-08-16';
+              const pubDate = (v.publishDate && (v.publishDate.startsWith('2026-08') || v.publishDate.startsWith('2026-07')))
+                ? v.publishDate
+                : (v.date && (v.date.startsWith('2026-08') || v.date.startsWith('2026-07')) ? v.date : scheduledDate);
               const subsGained = Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
               const netSubs = Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
               return {
                 ...v,
+                publishDate: pubDate,
+                date: pubDate,
+                sortOrder: v.sortOrder !== undefined ? v.sortOrder : idx + 1,
                 revenueFormatted: formatINR(v.revenueFormatted || v.revenue),
                 subscribersNetFormatted: fmtS(netSubs),
                 subscribersGainedFormatted: fmtS(subsGained),
@@ -1034,6 +1082,16 @@ export const useStore = create(
                 watchTimeHrsFormatted: fmtW(v.watchTimeHrs)
               };
             });
+            // Sort descending strictly
+            normalized.sort((a, b) => {
+              const dateA = a.publishDate || a.date || '';
+              const dateB = b.publishDate || b.date || '';
+              if (dateA && dateB && dateA !== dateB) {
+                return dateB.localeCompare(dateA);
+              }
+              return (a.sortOrder || 0) - (b.sortOrder || 0);
+            });
+            state.videos = normalized;
           }
           if (state.settings) {
             state.settings.currency = 'INR - Indian Rupee';

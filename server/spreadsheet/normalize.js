@@ -96,6 +96,7 @@ function parseVideosSheet(rows, currency) {
       thumbnail,
       videoUrl: row['Video URL'] || '',
       date: row['Upload Date'] || row['Date'] || '',
+      publishDate: row['Upload Date'] || row['Date'] || '',
       visibility: row['Visibility'] || 'Public',
       views,
       viewsFormatted: formatCompactNumber(views),

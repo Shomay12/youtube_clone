@@ -142,7 +142,7 @@ export const InsforgeService = {
             monetization: v.monetization !== false,
             restrictions: v.restrictions || 'None',
             category: v.category || 'Entertainment',
-            publishDate: v.publish_date || '2026-02-14',
+            publishDate: v.publish_date || '2026-08-16',
             sortOrder: Number(v.sort_order) || 0
           };
         });
@@ -244,7 +244,7 @@ export const InsforgeService = {
         monetization: videoData.monetization !== false,
         restrictions: videoData.restrictions || 'None',
         category: videoData.category || 'Entertainment',
-        publish_date: videoData.publishDate || '2026-02-14',
+        publish_date: videoData.publishDate || '2026-08-16',
         sort_order: Number(videoData.sortOrder) || 0
       };
 
@@ -304,7 +304,7 @@ export const InsforgeService = {
           monetization: v.monetization !== false,
           restrictions: v.restrictions || 'None',
           category: v.category || 'Entertainment',
-          publish_date: v.publishDate || '2026-02-14',
+          publish_date: v.publishDate || '2026-08-16',
           sort_order: v.sortOrder !== undefined ? Number(v.sortOrder) : idx + 1
         };
       });

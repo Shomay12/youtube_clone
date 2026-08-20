@@ -133,17 +133,17 @@ export default function CRM() {
 
   // Date Range Draft State
   const [dateDraft, setDateDraft] = useState({
-    anchorDate: simulationAnchorDate || '2026-08-12',
-    startDate: customStartDate || '2026-07-16',
-    endDate: customEndDate || '2026-08-12',
+    anchorDate: simulationAnchorDate || '2026-08-16',
+    startDate: customStartDate || '2026-07-20',
+    endDate: customEndDate || '2026-08-16',
     preset: selectedDateRange || 'last28'
   });
 
   useEffect(() => {
     setDateDraft({
-      anchorDate: simulationAnchorDate || '2026-08-12',
-      startDate: customStartDate || '2026-07-16',
-      endDate: customEndDate || '2026-08-12',
+      anchorDate: simulationAnchorDate || '2026-08-16',
+      startDate: customStartDate || '2026-07-20',
+      endDate: customEndDate || '2026-08-16',
       preset: selectedDateRange || 'last28'
     });
   }, [simulationAnchorDate, customStartDate, customEndDate, selectedDateRange]);
@@ -154,6 +154,7 @@ export default function CRM() {
     thumbnail: videos[0]?.thumbnail || '/thumbnails/1.webp',
     duration: videos[0]?.duration || '10:18',
     durationSecs: videos[0]?.durationSecs || 618,
+    publishDate: videos[0]?.publishDate || videos[0]?.date || '2026-08-16',
     subscribersGained: videos[0]?.subscribersGained || 29800,
     subscribersLost: videos[0]?.subscribersLost || 3576,
     views: videos[0]?.views || 2130000,
@@ -209,6 +210,7 @@ export default function CRM() {
         thumbnail: activeVideo.thumbnail || '/thumbnails/1.webp',
         duration: durStr,
         durationSecs: durSecs,
+        publishDate: activeVideo.publishDate || activeVideo.date || '2026-08-16',
         subscribersGained: activeVideo.subscribersGained !== undefined ? activeVideo.subscribersGained : Math.round((activeVideo.views || 10000) * 0.014),
         subscribersLost: activeVideo.subscribersLost !== undefined ? activeVideo.subscribersLost : Math.round(((activeVideo.subscribersGained || 1000) * 0.12)),
         views: vViews,
@@ -256,6 +258,7 @@ export default function CRM() {
       revenue: vRev,
       duration: durStr,
       durationSecs: durSecs,
+      publishDate: v.publishDate || v.date || '2026-08-16',
       avgViewDuration: avdStr,
       avgViewDurationSecs: avdSecs,
       subscribersGained: v.subscribersGained !== undefined ? v.subscribersGained : Math.round(vViews * 0.014),
@@ -277,9 +280,12 @@ export default function CRM() {
     const vRev = editBuf.revenue !== undefined ? Number(editBuf.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
     const vWatchTime = parseFloat(((vViews * avdSecs) / 3600).toFixed(1));
     const vSubsGained = Number(editBuf.subscribersGained) || 0;
+    const pubDate = editBuf.publishDate || '2026-08-16';
 
     const payload = {
       ...editBuf,
+      publishDate: pubDate,
+      date: pubDate,
       views: vViews,
       revenue: vRev,
       rpm: vRpm,
@@ -344,8 +350,11 @@ export default function CRM() {
     const vRev = selectedVideoDraft.revenue !== undefined ? Number(selectedVideoDraft.revenue) : parseFloat(((vViews / 1000) * vRpm).toFixed(2));
     const vWatchTime = parseFloat(((vViews * avdSecs) / 3600).toFixed(1));
     const vSubsGained = Number(selectedVideoDraft.subscribersGained) || 0;
+    const pubDate = selectedVideoDraft.publishDate || activeVideo.publishDate || activeVideo.date || '2026-08-16';
     const payload = {
       ...selectedVideoDraft,
+      publishDate: pubDate,
+      date: pubDate,
       views: vViews,
       revenue: vRev,
       rpm: vRpm,
@@ -737,6 +746,16 @@ export default function CRM() {
                       min={0}
                       step={50}
                     />
+                    <div className="crm-field">
+                      <label className="crm-field-label">📅 Publish Date</label>
+                      <input
+                        type="date"
+                        className="crm-input"
+                        style={{ color: '#fbbf24', fontWeight: 600 }}
+                        value={selectedVideoDraft.publishDate || '2026-08-16'}
+                        onChange={e => setSelectedVideoDraft(d => ({ ...d, publishDate: e.target.value }))}
+                      />
+                    </div>
                   </div>
 
                   <div className="crm-grid-2" style={{ marginTop: 8 }}>
@@ -768,6 +787,10 @@ export default function CRM() {
 
                   {/* Impact Summary Pill */}
                   <div className="crm-preview-small" style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span>Publish Date:</span>
+                      <strong style={{ color: '#fbbf24' }}>{selectedVideoDraft.publishDate || '2026-08-16'}</strong>
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span>Video Duration:</span>
                       <strong style={{ color: '#e2e8f0' }}>{selectedVideoDraft.duration || '10:18'}</strong>
@@ -837,6 +860,7 @@ export default function CRM() {
                 <thead>
                   <tr>
                     <th>Video & Thumbnail</th>
+                    <th>Publish Date</th>
                     <th>Duration</th>
                     <th>Subs Gained</th>
                     <th>Views</th>
@@ -875,6 +899,16 @@ export default function CRM() {
                         </td>
                         {isEditing ? (
                           <>
+                            <td>
+                              <input
+                                className="crm-inline-input"
+                                type="date"
+                                style={{ width: '130px', color: '#fbbf24', fontWeight: 600 }}
+                                value={editBuf.publishDate || '2026-08-16'}
+                                onKeyDown={handleInlineKeyDown}
+                                onChange={e => setEditBuf(b => ({ ...b, publishDate: e.target.value }))}
+                              />
+                            </td>
                             <td><input className="crm-inline-input" type="text" style={{ width: '65px' }} value={editBuf.duration || '10:18'}
                               onKeyDown={handleInlineKeyDown}
                               placeholder="10:18"
@@ -914,6 +948,9 @@ export default function CRM() {
                           </>
                         ) : (
                           <>
+                            <td style={{ color: '#fbbf24', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                              📅 {v.publishDate || v.date || '2026-08-16'}
+                            </td>
                             <td style={{ color: '#e2e8f0', fontWeight: 500 }}>
                               {v.duration || formatSecondsToAvd(v.durationSecs || 618)}
                             </td>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useStore, formatINR, fmtV, fmtW, fmtS } from '../store/useStore';
-import { formatDateRangeText, formatSingleDate } from '../engine/AnalyticsSimulationEngine';
+import { formatDateRangeText, formatSingleDate, VIDEO_ID_TO_DATE, TITLE_TO_SCHEDULE_DATE } from '../engine/AnalyticsSimulationEngine';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceDot
@@ -180,53 +180,39 @@ const Analytics = () => {
     const n = list.length;
     if (n === 0) return [];
 
-    // Determine earliest published video date
-    let firstVideoDateStr = '2026-02-14';
-    if (isVideoMode && video) {
-      firstVideoDateStr = video.publishDate || video.date || '2026-02-14';
-    } else {
-      const videoDates = (videos || []).map(v => v.publishDate || v.date).filter(Boolean).sort();
-      if (videoDates.length > 0) {
-        firstVideoDateStr = videoDates[0];
-      }
-    }
+    const videoPubDate = isVideoMode
+      ? ((currentVideo?.publishDate && (currentVideo.publishDate.startsWith('2026-08') || currentVideo.publishDate.startsWith('2026-07')))
+          ? currentVideo.publishDate
+          : (TITLE_TO_SCHEDULE_DATE[currentVideo?.title] || VIDEO_ID_TO_DATE[currentVideo?.id] || '2026-08-16'))
+      : null;
 
-    const firstVidDateObj = new Date(firstVideoDateStr);
-    const rampUpStartDateObj = new Date(firstVidDateObj);
-    rampUpStartDateObj.setDate(rampUpStartDateObj.getDate() - 3);
+    return list.map((item) => {
+      const isBeforePublish = isVideoMode && videoPubDate && item.date && (item.date < videoPubDate);
+      const isZero = isBeforePublish || (Number(item.views) === 0);
 
-    // Step 1: Compute baseline values with smooth upward incline & zero before first video date - 3 days
-    const basePoints = list.map((item, index) => {
-      const progress = n > 1 ? index / (n - 1) : 0.5;
-      const inclineMultiplier = 0.78 + progress * 0.44;
-      const wave = Math.sin(progress * Math.PI * 2.2) * 0.12;
-      const combinedMultiplier = inclineMultiplier + wave;
-
-      // Zero-ramp factor: 0 before rampUpStartDate, smooth ramp to 1 at firstVidDate
-      const itemDateObj = new Date(item.date);
-      let zeroRampFactor = 1.0;
-      if (itemDateObj < rampUpStartDateObj) {
-        zeroRampFactor = 0.0;
-      } else if (itemDateObj < firstVidDateObj) {
-        const totalDiff = firstVidDateObj.getTime() - rampUpStartDateObj.getTime();
-        const currentDiff = itemDateObj.getTime() - rampUpStartDateObj.getTime();
-        zeroRampFactor = totalDiff > 0 ? Math.min(1.0, Math.max(0.0, currentDiff / totalDiff)) : 1.0;
+      if (isZero) {
+        return {
+          ...item,
+          views: 0,
+          watchTimeHrs: 0,
+          revenue: 0,
+          subscribersNet: 0,
+          impressions: 0,
+          [selectedMetric]: 0,
+          typicalLower: 0,
+          typicalUpper: 0,
+          revenueTypicalUpper: 0
+        };
       }
 
-      const rawVal = item[selectedMetric] || 0;
-      const val = typeof rawVal === 'number' ? Math.round(rawVal * combinedMultiplier * zeroRampFactor) : (zeroRampFactor === 0 ? 0 : rawVal);
+      const rawVal = item[selectedMetric] !== undefined ? item[selectedMetric] : (item.views || 0);
+      const val = typeof rawVal === 'number' ? rawVal : Number(rawVal) || 0;
+      const views = Number(item.views) || 0;
+      const watchTimeHrs = Number(item.watchTimeHrs) || 0;
+      const revenue = Number(item.revenue) || 0;
+      const subscribersNet = Number(item.subscribersNet) || 0;
 
-      const rawViews = item.views || 0;
-      const views = Math.round(rawViews * combinedMultiplier * zeroRampFactor);
-
-      const rawWatch = item.watchTimeHrs || 0;
-      const watchTimeHrs = parseFloat((rawWatch * combinedMultiplier * zeroRampFactor).toFixed(1));
-
-      const rawRev = item.revenue || 0;
-      const revenue = parseFloat((rawRev * combinedMultiplier * zeroRampFactor).toFixed(2));
-
-      const rawSubs = item.subscribersNet || 0;
-      const subscribersNet = Math.round(rawSubs * combinedMultiplier * zeroRampFactor);
+      const baseTypical = typeof val === 'number' ? val * 0.85 : 1000;
 
       return {
         ...item,
@@ -234,48 +220,13 @@ const Analytics = () => {
         watchTimeHrs,
         revenue,
         subscribersNet,
-        val
-      };
-    });
-
-    // Step 2: Apply 5-point weighted Moving Average smoothing
-    const windowSize = Math.min(5, Math.floor(n / 2) || 1);
-
-    return basePoints.map((item, index) => {
-      let sumVal = 0, sumViews = 0, sumWatch = 0, sumRev = 0, sumSubs = 0, weightSum = 0;
-
-      for (let offset = -windowSize; offset <= windowSize; offset++) {
-        const idx = Math.min(Math.max(index + offset, 0), n - 1);
-        const weight = 1 / (1 + Math.abs(offset) * 0.5);
-        sumVal += (basePoints[idx].val || 0) * weight;
-        sumViews += (basePoints[idx].views || 0) * weight;
-        sumWatch += (basePoints[idx].watchTimeHrs || 0) * weight;
-        sumRev += (basePoints[idx].revenue || 0) * weight;
-        sumSubs += (basePoints[idx].subscribersNet || 0) * weight;
-        weightSum += weight;
-      }
-
-      const smoothedVal = Math.round(sumVal / weightSum);
-      const smoothedViews = Math.round(sumViews / weightSum);
-      const smoothedWatch = parseFloat((sumWatch / weightSum).toFixed(1));
-      const smoothedRev = parseFloat((sumRev / weightSum).toFixed(2));
-      const smoothedSubs = Math.round(sumSubs / weightSum);
-
-      const baseTypical = typeof smoothedVal === 'number' ? smoothedVal * 0.85 : 1000;
-
-      return {
-        ...item,
-        views: smoothedViews,
-        watchTimeHrs: smoothedWatch,
-        revenue: smoothedRev,
-        subscribersNet: smoothedSubs,
-        [selectedMetric]: smoothedVal,
+        [selectedMetric]: val,
         typicalLower: Math.round(baseTypical * 0.72),
         typicalUpper: Math.round(baseTypical * 1.25),
-        revenueTypicalUpper: Math.round(smoothedRev * 1.15)
+        revenueTypicalUpper: Math.round(revenue * 1.15)
       };
     });
-  }, [daily, selectedMetric, selectedDateRange, isVideoMode, aggregated, videos, video]);
+  }, [daily, selectedMetric, selectedDateRange, isVideoMode, aggregated, videos, video, currentVideo]);
 
   // Compute video upload marker points present within the rendered chart range
   const videoUploadPoints = useMemo(() => {
@@ -666,7 +617,7 @@ const Analytics = () => {
                 )}
                 <div className="chart-container-wrapper">
                   <ResponsiveContainer width="100%" height={260}>
-                    <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                    <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
                       <defs>
                         <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.2} />
@@ -678,14 +629,24 @@ const Analytics = () => {
                         dataKey="date"
                         stroke="#717171"
                         tickLine={false}
-                        axisLine={false}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                        tickMargin={10}
+                        minTickGap={25}
                         tickFormatter={formatXAxisTick}
                         ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                       />
-                      <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)} />
+                      <YAxis
+                        orientation="right"
+                        stroke="#717171"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={45}
+                        tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)}
+                      />
                       <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
-                      <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={2.5} fill="url(#colorBlue)" />
+                      <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
+                      <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={1.5} fill="url(#colorBlue)" isAnimationActive={false} />
                       {videoUploadPoints.map((v, i) => (
                         <ReferenceDot
                           key={`marker-overview-${v.id}-${v.date}-${i}`}
@@ -696,7 +657,7 @@ const Analytics = () => {
                           shape={(props) => {
                             if (!props.cx || !props.cy) return null;
                             return (
-                              <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                              <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
                                 <title>{`${v.title} (${v.date})`}</title>
                                 <rect
                                   x="0"
@@ -705,7 +666,7 @@ const Analytics = () => {
                                   height="16"
                                   rx="3"
                                   fill="#212121"
-                                  stroke="#444444"
+                                  stroke="#555555"
                                   strokeWidth="1"
                                 />
                                 <polygon points="8,4 14,8 8,12" fill="#ffffff" />
@@ -874,7 +835,7 @@ const Analytics = () => {
                 <div className="realtime-bar-chart-box">
                   <ResponsiveContainer width="100%" height={60}>
                     <BarChart data={realtimeDataset.last48Hours}>
-                      <Bar dataKey="views" fill="#35b7e6" radius={[1, 1, 0, 0]} />
+                      <Bar dataKey="views" fill="#35b7e6" radius={[1, 1, 0, 0]} isAnimationActive={false} />
                     </BarChart>
                   </ResponsiveContainer>
                   <div className="chart-time-labels">
@@ -1015,19 +976,29 @@ const Analytics = () => {
             </div>
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    tickMargin={10}
+                    minTickGap={25}
                     tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
+                  <YAxis
+                    orientation="right"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={45}
+                    tickFormatter={formatYAxisValue}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={2} fill="rgba(129, 140, 248, 0.15)" />
+                  <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={1.5} fill="rgba(129, 140, 248, 0.15)" isAnimationActive={false} />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-content-${v.id}-${v.date}-${i}`}
@@ -1038,9 +1009,9 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
                             <polygon points="8,4 14,8 8,12" fill="#ffffff" />
                           </g>
                         );
@@ -1061,7 +1032,7 @@ const Analytics = () => {
                 <div className="how-viewers-find-container">
                   <div className="donut-chart-wrapper">
                     <PieChart width={140} height={140}>
-                      <Pie data={[{ name: 'Search', value: 81.2 }, { name: 'Browse', value: 8.0 }, { name: 'Other', value: 6.9 }, { name: 'Direct', value: 1.1 }, { name: 'External', value: 0.9 }, { name: 'Others', value: 2.0 }]} cx={65} cy={65} innerRadius={42} outerRadius={62} dataKey="value">
+                      <Pie isAnimationActive={false} data={[{ name: 'Search', value: 81.2 }, { name: 'Browse', value: 8.0 }, { name: 'Other', value: 6.9 }, { name: 'Direct', value: 1.1 }, { name: 'External', value: 0.9 }, { name: 'Others', value: 2.0 }]} cx={65} cy={65} innerRadius={42} outerRadius={62} dataKey="value">
                         <Cell fill="#818cf8" /><Cell fill="#a855f7" /><Cell fill="#38bdf8" /><Cell fill="#6366f1" /><Cell fill="#c084fc" /><Cell fill="#475569" />
                       </Pie>
                     </PieChart>
@@ -1197,19 +1168,29 @@ const Analytics = () => {
             </div>
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    tickMargin={10}
+                    minTickGap={25}
                     tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
+                  <YAxis
+                    orientation="right"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={45}
+                    tickFormatter={formatYAxisValue}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={2} fill="rgba(236, 72, 153, 0.15)" />
+                  <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={1.5} fill="rgba(236, 72, 153, 0.15)" isAnimationActive={false} />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-engagement-${v.id}-${v.date}-${i}`}
@@ -1220,9 +1201,9 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
                             <polygon points="8,4 14,8 8,12" fill="#ffffff" />
                           </g>
                         );
@@ -1449,6 +1430,7 @@ const Analytics = () => {
                 <div className="donut-chart-wrapper">
                   <PieChart width={140} height={140}>
                     <Pie
+                      isAnimationActive={false}
                       data={trafficSources.length > 0 ? trafficSources.map(t => ({ name: t.source, value: t.percentage })) : [
                         { name: 'Browse Features', value: 43 },
                         { name: 'Suggested Videos', value: 24 },
@@ -1544,7 +1526,7 @@ const Analytics = () => {
 
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={230}>
-                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorPurple" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#a855f7" stopOpacity={0.25} />
@@ -1556,14 +1538,24 @@ const Analytics = () => {
                     dataKey="date"
                     stroke="#717171"
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    tickMargin={10}
+                    minTickGap={25}
                     tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
-                  <YAxis orientation="right" stroke="#717171" tickLine={false} axisLine={false} tickFormatter={formatYAxisValue} />
+                  <YAxis
+                    orientation="right"
+                    stroke="#717171"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={45}
+                    tickFormatter={formatYAxisValue}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" />
-                  <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={2.5} fill="url(#colorPurple)" />
+                  <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={1.5} fill="url(#colorPurple)" isAnimationActive={false} />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-audience-${v.id}-${v.date}-${i}`}
@@ -1574,9 +1566,9 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 22})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#444444" strokeWidth="1" />
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
                             <polygon points="8,4 14,8 8,12" fill="#ffffff" />
                           </g>
                         );
@@ -1917,33 +1909,37 @@ const Analytics = () => {
 
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={dailyWithTypical} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 45, left: 10, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorTeal" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#00c49f" stopOpacity={0.20} />
                       <stop offset="95%" stopColor="#00c49f" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    stroke="#888888"
+                    stroke="#717171"
                     tickLine={false}
-                    axisLine={{ stroke: '#e5e5e5' }}
+                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    tickMargin={10}
+                    minTickGap={25}
                     tickFormatter={formatXAxisTick}
                     ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
                     orientation="right"
-                    stroke="#888888"
+                    stroke="#717171"
                     tickLine={false}
                     axisLine={false}
+                    tickMargin={8}
+                    width={55}
                     domain={[0, 'auto']}
-                    tickFormatter={v => `₹${Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    tickFormatter={v => `₹${formatYAxisValue(v)}`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(0, 0, 0, 0.04)" />
-                  <Area type="monotone" dataKey="revenue" stroke="#00c49f" strokeWidth={2} fill="url(#colorTeal)" />
+                  <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(0, 0, 0, 0.04)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="revenue" stroke="#00c49f" strokeWidth={1.5} fill="url(#colorTeal)" isAnimationActive={false} />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-revenue-${v.id}-${v.date}-${i}`}
@@ -1954,10 +1950,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 8}, ${props.cy - 16})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="16" height="14" rx="2" fill="#606060" />
-                            <polygon points="6,3 12,7 6,11" fill="#ffffff" />
+                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
+                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -2115,12 +2111,28 @@ const Analytics = () => {
         <div className="studio-tab-layout">
           <StudioCard title="Channel Growth Velocity & Velocity Trend" subtitle="Daily views compared with 14-day moving baseline">
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={daily}>
-                <CartesianGrid stroke="#303030" vertical={false} />
-                <XAxis dataKey="date" tickFormatter={formatXAxisTick} />
-                <YAxis orientation="right" tickFormatter={formatYAxisValue} />
+              <AreaChart data={daily} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#717171"
+                  tickLine={false}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                  tickMargin={10}
+                  minTickGap={25}
+                  tickFormatter={formatXAxisTick}
+                />
+                <YAxis
+                  orientation="right"
+                  stroke="#717171"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  width={45}
+                  tickFormatter={formatYAxisValue}
+                />
                 <Tooltip />
-                <Area type="monotone" dataKey="views" stroke="#ff9800" fill="rgba(255, 152, 0, 0.12)" strokeWidth={2.5} />
+                <Area type="monotone" dataKey="views" stroke="#ff9800" fill="rgba(255, 152, 0, 0.12)" strokeWidth={1.5} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           </StudioCard>

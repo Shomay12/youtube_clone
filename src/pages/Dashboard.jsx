@@ -12,7 +12,7 @@ const Dashboard = () => {
   const recentComments = (comments || []).filter(c => c && c.status !== 'Held for review').slice(0, 3);
   const recentSubscribers = analytics?.subscribers || [];
 
-  const [ideasIdx, setIdeasIdx] = useState(0);
+  const [ideasIdx, setIdeasIdx] = useState(1);
   const [creatorIdx, setCreatorIdx] = useState(0);
 
   useEffect(() => {

@@ -23,6 +23,45 @@ export const CHANNEL_BENCHMARKS = {
   banner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80'
 };
 
+export const VIDEO_ID_TO_DATE = {
+  'VID001': '2026-08-16',
+  'VID002': '2026-08-12',
+  'VID003': '2026-08-08',
+  'VID004': '2026-08-04',
+  'VID005': '2026-07-31',
+  'VID006': '2026-07-27',
+  'VID007': '2026-07-23',
+  'VID008': '2026-07-19',
+  'VID009': '2026-07-15',
+  'VID010': '2026-07-11'
+};
+
+export const TITLE_TO_SCHEDULE_DATE = {
+  'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-08-16',
+  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-08-12',
+  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-08-08',
+  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-08-04',
+  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-07-31',
+  'Make AI Videos Using Notebook LM': '2026-07-27',
+  'Raj Shamani Business Idea': '2026-07-23',
+  'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-07-19',
+  'This AI Saved Me 20 Hours': '2026-07-15',
+  'My Biggest AI Project Yet': '2026-07-11'
+};
+
+export const VIDEO_PUBLISH_SCHEDULE = [
+  '2026-08-16',
+  '2026-08-12',
+  '2026-08-08',
+  '2026-08-04',
+  '2026-07-31',
+  '2026-07-27',
+  '2026-07-23',
+  '2026-07-19',
+  '2026-07-15',
+  '2026-07-11'
+];
+
 export const RAW_VIDEOS = [
   {
     id: 'VID001',
@@ -36,7 +75,7 @@ export const RAW_VIDEOS = [
     ctr: 8.9,
     rpm: 435.066426,
     cpm: 791.03,
-    publishDate: '2026-07-17',
+    publishDate: '2026-08-16',
     thumbnail: '/thumbnails/latest_video.png',
     category: 'Entertainment',
     watchTimeHrs: 52346,
@@ -60,7 +99,7 @@ export const RAW_VIDEOS = [
     ctr: 7.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-02-28',
+    publishDate: '2026-08-12',
     thumbnail: '/thumbnails/2.webp',
     category: 'Entertainment'
   },
@@ -76,7 +115,7 @@ export const RAW_VIDEOS = [
     ctr: 6.4,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-03-02',
+    publishDate: '2026-08-08',
     thumbnail: '/thumbnails/3.webp',
     category: 'Entertainment'
   },
@@ -92,7 +131,7 @@ export const RAW_VIDEOS = [
     ctr: 6.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-03-15',
+    publishDate: '2026-08-04',
     thumbnail: '/thumbnails/4.webp',
     category: 'Education'
   },
@@ -108,7 +147,7 @@ export const RAW_VIDEOS = [
     ctr: 7.8,
     rpm: 33.70,
     cpm: 57.96,
-    publishDate: '2026-03-22',
+    publishDate: '2026-07-31',
     thumbnail: '/thumbnails/5.webp',
     category: 'Education'
   },
@@ -124,7 +163,7 @@ export const RAW_VIDEOS = [
     ctr: 4.9,
     rpm: 34.50,
     cpm: 59.34,
-    publishDate: '2026-04-10',
+    publishDate: '2026-07-27',
     thumbnail: '/thumbnails/4.webp',
     category: 'Science & Technology'
   },
@@ -140,7 +179,7 @@ export const RAW_VIDEOS = [
     ctr: 9.3,
     rpm: 33.20,
     cpm: 57.10,
-    publishDate: '2026-04-28',
+    publishDate: '2026-07-23',
     thumbnail: '/thumbnails/5.webp',
     category: 'Business'
   },
@@ -156,7 +195,7 @@ export const RAW_VIDEOS = [
     ctr: 7.1,
     rpm: 33.40,
     cpm: 57.45,
-    publishDate: '2026-06-02',
+    publishDate: '2026-07-19',
     thumbnail: '/thumbnails/7.webp',
     category: 'Entertainment'
   },
@@ -172,7 +211,7 @@ export const RAW_VIDEOS = [
     ctr: 8.4,
     rpm: 34.00,
     cpm: 58.48,
-    publishDate: '2026-07-12',
+    publishDate: '2026-07-15',
     thumbnail: '/thumbnails/2.webp',
     category: 'Science & Technology'
   },
@@ -188,7 +227,7 @@ export const RAW_VIDEOS = [
     ctr: 6.8,
     rpm: 33.60,
     cpm: 57.79,
-    publishDate: '2026-07-22',
+    publishDate: '2026-07-11',
     thumbnail: '/thumbnails/3.webp',
     category: 'Science & Technology'
   }
@@ -265,7 +304,7 @@ export function formatDateRangeText(startDateInput, endDateInput) {
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-13') {
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16') {
   const today = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T00:00:00Z`);
   const dailyData = [];
 
@@ -277,36 +316,40 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-1
     const dateStr = d.toISOString().split('T')[0];
     const dayOfWeek = d.getUTCDay(); // 0 = Sun, 6 = Sat
 
-    // Weekend multiplier (Sat/Sun get 1.35x - 1.55x)
+    // Weekend multiplier (subtle +8% lift on weekends)
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.42 : 1.0;
+    const weekendMultiplier = isWeekend ? 1.08 : 1.0;
 
-    // Organic sine fluctuation + deterministic harmonic wave (no random flicker on refresh)
-    const seasonalFactor = 1 + 0.15 * Math.sin((i / 365) * 2 * Math.PI);
-    const noise = 1.0 + 0.09 * Math.sin(i * 1.618) + 0.04 * Math.cos(i * 3.1415);
+    // Gentle natural growth incline over time (+18% across 365 days)
+    const timeProgress = (daysCount - 1 - i) / (daysCount - 1);
+    const growthIncline = 0.90 + timeProgress * 0.20;
 
-    // Upload day spikes
+    // Organic sine fluctuation for smooth, realistic wave variation
+    const seasonalFactor = 1 + 0.04 * Math.sin((i / 365) * 2 * Math.PI);
+    const roughness = 1.0 + 0.04 * Math.sin(i * 1.5 + 0.4) + 0.025 * Math.cos(i * 2.8 + 1.1);
+
+    // Realistic, gentle upload day lift (+16% bump, decaying softly next day)
     let uploadBoost = 1.0;
     PROCESSED_VIDEOS.forEach(v => {
       if (v.publishDate === dateStr) {
-        uploadBoost += 2.8;
+        uploadBoost += 0.16;
       }
     });
 
-    const baseDailyViews = Math.round(52000 * weekendMultiplier * seasonalFactor * noise * uploadBoost);
-    const ctr = parseFloat((7.8 + 0.9 * Math.sin(i * 2.3 + 0.7)).toFixed(1));
+    const baseDailyViews = Math.round(78000 * growthIncline * weekendMultiplier * seasonalFactor * roughness * uploadBoost);
+    const ctr = parseFloat((7.8 + 0.5 * Math.sin(i * 2.3 + 0.7)).toFixed(1));
     const impressions = Math.round(baseDailyViews / (ctr / 100));
 
-    const avgDurationSecs = Math.round(240 + 25 * Math.cos(i * 1.1 + 0.3));
+    const avgDurationSecs = Math.round(240 + 15 * Math.cos(i * 1.1 + 0.3));
     const watchTimeHrs = parseFloat((baseDailyViews * (avgDurationSecs / 3600)).toFixed(1));
 
     // Daily RPM around $33.64 average
-    const rpm = parseFloat((33.64 + 1.2 * Math.sin(i * 1.9 + 1.2)).toFixed(2));
+    const rpm = parseFloat((33.64 + 0.8 * Math.sin(i * 1.9 + 1.2)).toFixed(2));
     const cpm = parseFloat((rpm * 1.72).toFixed(2));
     const revenue = parseFloat(((baseDailyViews / 1000) * rpm).toFixed(2));
 
-    const subsGained = Math.round(baseDailyViews * 0.012 * (1.0 + 0.08 * Math.sin(i * 2.8)));
-    const subsLost = Math.round(subsGained * (0.12 + 0.02 * Math.cos(i * 1.7)));
+    const subsGained = Math.round(baseDailyViews * 0.012 * (1.0 + 0.04 * Math.sin(i * 2.8)));
+    const subsLost = Math.round(subsGained * (0.12 + 0.01 * Math.cos(i * 1.7)));
     cumulativeSubs += (subsGained - subsLost);
 
     const likes = Math.round(baseDailyViews * 0.044);
@@ -336,7 +379,7 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-1
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-12');
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-16');
 
 /**
  * Filter daily metrics based on date range boundaries
@@ -502,7 +545,7 @@ export function getAudienceBreakdown(totalViews) {
 /**
  * Realtime continuous data generator (Last 60 minutes & Last 48 hours)
  */
-export function generateRealtimeDataset(anchorDate = '2026-08-12') {
+export function generateRealtimeDataset(anchorDate = '2026-08-16') {
   const last60Minutes = [];
   const now = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T12:00:00Z`);
 
