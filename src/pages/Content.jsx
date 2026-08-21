@@ -96,9 +96,7 @@ const Content = () => {
   // Prioritize video's live publishDate from CRM/store or strict 4-day gap schedule
   const normalizedDataset = currentDataset.map((item, idx) => {
     const scheduledDate = TITLE_TO_SCHEDULE_DATE[item.title] || VIDEO_ID_TO_DATE[item.id] || (activeTab === 'Videos' && VIDEO_PUBLISH_SCHEDULE[idx]) || '2026-08-16';
-    const pubDate = (item.publishDate && (item.publishDate.startsWith('2026-08') || item.publishDate.startsWith('2026-07')))
-      ? item.publishDate
-      : (item.date && (item.date.startsWith('2026-08') || item.date.startsWith('2026-07')) ? item.date : scheduledDate);
+    const pubDate = item.publishDate || item.date || scheduledDate;
 
     return {
       ...item,

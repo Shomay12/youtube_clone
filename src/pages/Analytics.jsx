@@ -181,10 +181,12 @@ const Analytics = () => {
     if (n === 0) return [];
 
     const videoPubDate = isVideoMode
-      ? ((currentVideo?.publishDate && (currentVideo.publishDate.startsWith('2026-08') || currentVideo.publishDate.startsWith('2026-07')))
-          ? currentVideo.publishDate
-          : (TITLE_TO_SCHEDULE_DATE[currentVideo?.title] || VIDEO_ID_TO_DATE[currentVideo?.id] || '2026-08-16'))
+      ? (currentVideo?.publishDate || currentVideo?.date || '2026-08-16')
       : null;
+
+    const nonZeroItems = list.filter(item => Number(item.views) > 0);
+    const avgVal = nonZeroItems.reduce((acc, item) => acc + (Number(item[selectedMetric]) || Number(item.views) || 0), 0) / (nonZeroItems.length || 1);
+    const avgRev = nonZeroItems.reduce((acc, item) => acc + (Number(item.revenue) || 0), 0) / (nonZeroItems.length || 1);
 
     return list.map((item) => {
       const isBeforePublish = isVideoMode && videoPubDate && item.date && (item.date < videoPubDate);
@@ -212,7 +214,9 @@ const Analytics = () => {
       const revenue = Number(item.revenue) || 0;
       const subscribersNet = Number(item.subscribersNet) || 0;
 
-      const baseTypical = typeof val === 'number' ? val * 0.85 : 1000;
+      // Smooth historical envelope baseline (typical corridor)
+      const typicalUpper = Math.round(avgVal * 1.30);
+      const typicalLower = Math.round(avgVal * 0.70);
 
       return {
         ...item,
@@ -221,9 +225,9 @@ const Analytics = () => {
         revenue,
         subscribersNet,
         [selectedMetric]: val,
-        typicalLower: Math.round(baseTypical * 0.72),
-        typicalUpper: Math.round(baseTypical * 1.25),
-        revenueTypicalUpper: Math.round(revenue * 1.15)
+        typicalLower,
+        typicalUpper,
+        revenueTypicalUpper: Math.round(avgRev * 1.25)
       };
     });
   }, [daily, selectedMetric, selectedDateRange, isVideoMode, aggregated, videos, video, currentVideo]);
@@ -262,6 +266,26 @@ const Analytics = () => {
     return [lower, upper];
   }, [daily]);
 
+  // Compute exactly 7 evenly spaced tick dates from day start (index 0) to day end (index len - 1)
+  const chartTicks = useMemo(() => {
+    if (selectedDateRange === 'first24') {
+      return ['0', '4', '8', '12', '16', '20', '24 hours'];
+    }
+    if (!dailyWithTypical || dailyWithTypical.length === 0) return undefined;
+    const len = dailyWithTypical.length;
+    if (len <= 7) return dailyWithTypical.map(d => d.date);
+
+    const ticks = [];
+    const count = 7;
+    for (let i = 0; i < count; i++) {
+      const idx = Math.round((i * (len - 1)) / (count - 1));
+      if (dailyWithTypical[idx] && dailyWithTypical[idx].date) {
+        ticks.push(dailyWithTypical[idx].date);
+      }
+    }
+    return ticks;
+  }, [dailyWithTypical, selectedDateRange]);
+
   const formatXAxisDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== 'string') return dateStr;
     if (!dateStr.includes('-') && !dateStr.includes('/')) return dateStr;
@@ -287,7 +311,8 @@ const Analytics = () => {
   };
 
   const formatXAxisTick = (dateStr) => {
-    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    if (!dateStr || typeof dateStr !== 'string') return '';
+    if (dateStr.includes('hours') || dateStr === '0' || dateStr === '4' || dateStr === '8' || dateStr === '12' || dateStr === '16' || dateStr === '20' || dateStr === '24') return dateStr;
     if (!dateStr.includes('-') && !dateStr.includes('/')) return dateStr;
 
     const parts = dateStr.split('-');
@@ -306,7 +331,8 @@ const Analytics = () => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = monthNames[dateObj.getMonth()];
     const day = dateObj.getDate();
-    return `${month} ${day}`;
+    const year = dateObj.getFullYear();
+    return `${month} ${day}, ${year}`;
   };
 
   const formatYAxisValue = (val) => {
@@ -323,19 +349,61 @@ const Analytics = () => {
     return `${val}`;
   };
 
-  // Custom tooltips for Recharts formatted in INR (₹)
+  const formatTooltipDate = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    if (!dateStr.includes('-') && !dateStr.includes('/')) return dateStr;
+
+    const parts = dateStr.split('-');
+    let dateObj;
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      dateObj = new Date(dateStr);
+    }
+
+    if (isNaN(dateObj.getTime())) return dateStr;
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayOfWeek = dayNames[dateObj.getDay()];
+    const month = monthNames[dateObj.getMonth()];
+    const day = dateObj.getDate();
+    const year = dateObj.getFullYear();
+    return `${dayOfWeek}, ${month} ${day}, ${year}`;
+  };
+
+  // Custom tooltips for Recharts formatted matching YouTube Studio
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const val = payload[0].value;
-      const formatted = selectedMetric === 'revenue'
-        ? `₹${val?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(1)}K` : val);
+      const entry = payload.find(p => p.dataKey === selectedMetric || (selectedMetric === 'impressions' && p.dataKey === 'impressions') || p.dataKey === 'views') || payload[0];
+      const val = entry.value;
+      let formatted = typeof val === 'number' ? val.toLocaleString('en-IN') : val;
+      if (selectedMetric === 'revenue') {
+        formatted = `₹${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      } else if (selectedMetric === 'watchTimeHrs') {
+        formatted = `${val} hrs`;
+      } else if (selectedMetric === 'subscribersNet') {
+        formatted = `${val >= 0 ? '+' : ''}${Number(val).toLocaleString('en-IN')}`;
+      }
+
       return (
-        <div className="yt-chart-tooltip">
-          <div className="tooltip-date">{formatXAxisDate(label)}</div>
-          <div className="tooltip-value">
-            <span className="tooltip-dot" />
-            <span>{selectedMetric.toUpperCase()}: <strong>{formatted}</strong></span>
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '8px',
+          boxShadow: '0 3px 12px rgba(0, 0, 0, 0.15)',
+          border: '1px solid #e5e5e5',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontFamily: 'Roboto, Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+        }}>
+          <div style={{ fontSize: '12px', color: '#606060', fontWeight: 500, marginBottom: '2px' }}>
+            {formatTooltipDate(label)}
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#065fd4', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+            {formatted}
           </div>
         </div>
       );
@@ -412,9 +480,32 @@ const Analytics = () => {
     if (selectedDateRange && selectedDateRange !== 'since_published') {
       return dateRangeLabel;
     }
-    const pDate = currentVideo?.publishDate || currentVideo?.date || '2026-07-22';
+    const pDate = currentVideo?.publishDate || currentVideo?.date || '2026-08-16';
     return `${formatSingleDate(pDate)} – Now`;
   }, [isVideoMode, selectedDateRange, dateRangeLabel, currentVideo]);
+
+  // Dynamic Realtime Calculations
+  const realtime48hViews = isVideoMode
+    ? (currentVideo.realtimeViews48h !== undefined ? Number(currentVideo.realtimeViews48h) : (currentVideo.views ? Math.round(Number(currentVideo.views) * 0.0055) : 0))
+    : (channelInfo.realtimeViews48h !== undefined ? Number(channelInfo.realtimeViews48h) : Math.round(((channelInfo.viewsLast28Days || aggregated.views || 21450000)) * 0.0056));
+
+  const realtimeScaledBars = useMemo(() => {
+    const rawBars = realtimeDataset?.last48Hours || [];
+    const rawTotal = rawBars.reduce((s, b) => s + (b.views || 0), 0) || 1;
+    const factor = realtime48hViews / rawTotal;
+    return rawBars.map(b => ({
+      ...b,
+      views: Math.max(1, Math.round((b.views || 0) * factor))
+    }));
+  }, [realtimeDataset, realtime48hViews]);
+
+  const videoTrafficSources = currentVideo?.realtimeTrafficSources || {
+    search: 47.5,
+    browse: 18.6,
+    channel: 14.2,
+    other: 9.3,
+    external: 3.6
+  };
 
   // Top videos sorted by revenue calculated using (Views / 1000) * RPM
   const topEarningVideos = useMemo(() => {
@@ -543,7 +634,7 @@ const Analytics = () => {
             </h2>
             <p className="analytics-headline-sub">
               {isVideoMode
-                ? `This video has gotten ${aggregated.viewsFormatted || '45.1K'} views since it was published`
+                ? `This video has gotten ${aggregated.viewsFormatted || fmtV(currentVideo.views) || '0'} views since it was published`
                 : `Your channel got ${aggregated.viewsFormatted} views in this selected period`}
             </p>
           </div>
@@ -560,7 +651,7 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Views</div>
                     <div className="metric-selector-val">
-                      <span>{aggregated.viewsFormatted || '45.1K'}</span>
+                      <span>{aggregated.viewsFormatted || fmtV(currentVideo.views) || '0'}</span>
                       <StudioCheckBadge style={{ marginLeft: '6px' }} />
                     </div>
                     <div className="metric-sub-label">{isVideoMode ? `${fmtV(Math.round(aggregated.views * 0.34))} more than usual` : 'About the same as usual'}</div>
@@ -572,10 +663,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Watch time (hours)</div>
                     <div className="metric-selector-val">
-                      <span>{(aggregated.watchTimeHrsFormatted || '1.3K').replace(/\s*hrs\s*/gi, '')}</span>
-                      <StudioCheckBadge style={{ marginLeft: '6px' }} />
+                      <span>{(aggregated.watchTimeHrsFormatted || '0').replace(/\s*hrs\s*/gi, '')}</span>
+                      <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">About the same as usual</div>
+                    <div className="metric-sub-label">{isVideoMode ? '928.7 more than usual' : '928.7 more than usual'}</div>
                   </div>
 
                   <div
@@ -584,9 +675,10 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Subscribers</div>
                     <div className="metric-selector-val">
-                      <span>{fmtS(isVideoMode ? (currentVideo.subscribersGained !== undefined ? currentVideo.subscribersGained : (currentVideo.netSubscribers !== undefined ? currentVideo.netSubscribers : aggregated.subscribersNet)) : (aggregated.subscribersNet || aggregated.subscribersGained || channelInfo.subscribersGainedLast28Days || 214))}</span>
+                      <span>{aggregated.subscribersNetFormatted || fmtS(aggregated.subscribersNet)}</span>
+                      <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">In this period</div>
+                    <div className="metric-sub-label">150% more than previous 28 days</div>
                   </div>
 
                   <div
@@ -595,26 +687,14 @@ const Analytics = () => {
                   >
                     <div className="metric-selector-label">Estimated revenue <span className="material-symbols-outlined card-info-icon">info</span></div>
                     <div className="metric-selector-val">
-                      <span>{formatINR(aggregated.revenueFormatted || aggregated.revenue || 12510.97)}</span>
+                      <span>{formatINR(aggregated.revenueFormatted || aggregated.revenue || 0)}</span>
                       <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </div>
-                    <div className="metric-sub-label">{isVideoMode ? `${formatINR(aggregated.revenue * 0.05)} more than usual` : 'About the same as usual'}</div>
+                    <div className="metric-sub-label">{isVideoMode ? `${formatINR(aggregated.revenue * 0.05)} more than usual` : '₹6,060.65 more than usual'}</div>
                   </div>
                 </div>
 
                 {/* Chart Area */}
-                {(selectedDateRange === 'first24' || isVideoMode) && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: '#aaaaaa', padding: '12px 16px 4px 16px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#00e5ff' }}></span>
-                      This video
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#555555' }}></span>
-                      Typical performance
-                    </span>
-                  </div>
-                )}
                 <div className="chart-container-wrapper">
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
@@ -624,16 +704,18 @@ const Analytics = () => {
                           <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                      <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                       <XAxis
                         dataKey="date"
                         stroke="#717171"
-                        tickLine={false}
-                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                        tickMargin={10}
-                        minTickGap={25}
+                        tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                        axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                        tickMargin={8}
+                        padding={{ left: 16, right: 16 }}
+                        interval={0}
+                        ticks={chartTicks}
+                        tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                         tickFormatter={formatXAxisTick}
-                        ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                       />
                       <YAxis
                         orientation="right"
@@ -641,12 +723,21 @@ const Analytics = () => {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        width={45}
+                        width={48}
+                        allowDecimals={false}
+                        tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                         tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
-                      <Area type="monotone" dataKey={selectedMetric} stroke="#00e5ff" strokeWidth={1.5} fill="url(#colorBlue)" isAnimationActive={false} />
+                      <Area
+                        type="monotone"
+                        dataKey={selectedMetric}
+                        stroke="#00e5ff"
+                        strokeWidth={1.75}
+                        fill="url(#colorBlue)"
+                        isAnimationActive={false}
+                      />
                       {videoUploadPoints.map((v, i) => (
                         <ReferenceDot
                           key={`marker-overview-${v.id}-${v.date}-${i}`}
@@ -657,19 +748,19 @@ const Analytics = () => {
                           shape={(props) => {
                             if (!props.cx || !props.cy) return null;
                             return (
-                              <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
+                              <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                                 <title>{`${v.title} (${v.date})`}</title>
                                 <rect
                                   x="0"
                                   y="0"
-                                  width="20"
-                                  height="16"
-                                  rx="3"
-                                  fill="#212121"
-                                  stroke="#555555"
+                                  width="18"
+                                  height="14"
+                                  rx="2"
+                                  fill="#505050"
+                                  stroke="#333333"
                                   strokeWidth="1"
                                 />
-                                <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                                <polygon points="7,4 12,7 7,10" fill="#ffffff" />
                               </g>
                             );
                           }}
@@ -698,7 +789,7 @@ const Analytics = () => {
                         <strong>More impressions from YouTube search</strong>
                       </div>
                       <p style={{ color: '#aaaaaa', fontSize: '12px', paddingLeft: '28px' }}>
-                        This video appeared 361,089 times in search results — that's more than the 6,600–68,300 that's typical in this time frame.
+                        This video appeared {Math.round((aggregated.impressions || (Number(currentVideo.views) || 0) * 11.2) * 0.81).toLocaleString('en-IN')} times in search results — that's more than the {fmtV(Math.round((aggregated.impressions || (Number(currentVideo.views) || 0) * 11.2) * 0.15))}–{fmtV(Math.round((aggregated.impressions || (Number(currentVideo.views) || 0) * 11.2) * 0.45))} that's typical in this time frame.
                       </p>
                     </div>
                   </StudioCard>
@@ -715,49 +806,49 @@ const Analytics = () => {
                           <span>YouTube search</span>
                           <span style={{ color: '#aaaaaa' }}>81.1%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            36.6K <StudioUpBadge />
+                            {fmtV(Math.round(aggregated.views * 0.811))} <StudioUpBadge />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                           <span>YouTube recommendations</span>
                           <span style={{ color: '#aaaaaa' }}>7.6%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            3.4K <StudioDownBadge color="#aaaaaa" />
+                            {fmtV(Math.round(aggregated.views * 0.076))} <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
                           <span style={{ color: '#aaaaaa' }}>↳ YouTube Home</span>
                           <span style={{ color: '#aaaaaa' }}>6.8%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            3.1K <StudioDownBadge color="#aaaaaa" />
+                            {fmtV(Math.round(aggregated.views * 0.068))} <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingLeft: '16px' }}>
                           <span style={{ color: '#aaaaaa' }}>↳ Up next</span>
                           <span style={{ color: '#aaaaaa' }}>0.8%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            360 <StudioDownBadge color="#aaaaaa" />
+                            {fmtV(Math.round(aggregated.views * 0.008))} <StudioDownBadge color="#aaaaaa" />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                           <span>Other YouTube features</span>
                           <span style={{ color: '#aaaaaa' }}>6.9%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            3.1K <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                            {fmtV(Math.round(aggregated.views * 0.069))} <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                           <span>Direct or unknown</span>
                           <span style={{ color: '#aaaaaa' }}>1.1%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            496 <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                            {fmtV(Math.round(aggregated.views * 0.011))} <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                           <span>Other</span>
                           <span style={{ color: '#aaaaaa' }}>2.3%</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            1K <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
+                            {fmtV(Math.round(aggregated.views * 0.023))} <span className="material-symbols-outlined" style={{ color: '#717171', fontSize: '20px' }}>remove</span>
                           </span>
                         </div>
                       </div>
@@ -822,19 +913,23 @@ const Analytics = () => {
                 <div className="realtime-status-row">
                   <span className="live-dot" /> Updating live
                 </div>
-                <div className="realtime-big-number">{isVideoMode ? (currentVideo.views ? Math.round(Number(currentVideo.views) * 0.0055).toLocaleString('en-IN') : '183') : (channelInfo.subscribers?.toLocaleString('en-IN') || aggregated.subscribersNet?.toLocaleString('en-IN'))}</div>
+                <div className="realtime-big-number">
+                  {isVideoMode
+                    ? realtime48hViews.toLocaleString('en-IN')
+                    : (channelInfo.realtimeSubscribers ? Number(channelInfo.realtimeSubscribers).toLocaleString('en-IN') : (channelInfo.subscribersFormatted || (channelInfo.subscribers ? channelInfo.subscribers.toLocaleString('en-IN') : (aggregated.subscribersNetFormatted || '0'))))}
+                </div>
                 <div className="realtime-sub-text">{isVideoMode ? 'Views · Last 48 hours' : 'Subscribers'}</div>
 
                 {!isVideoMode && <button className="see-live-count-btn">See live count</button>}
 
                 {!isVideoMode && <hr className="studio-divider" />}
 
-                {!isVideoMode && <div className="realtime-big-number">{Math.round((aggregated.views || 21450000) * 0.0056).toLocaleString('en-IN')}</div>}
+                {!isVideoMode && <div className="realtime-big-number">{realtime48hViews.toLocaleString('en-IN')}</div>}
                 {!isVideoMode && <div className="realtime-sub-text">Views · Last 48 hours</div>}
 
                 <div className="realtime-bar-chart-box">
                   <ResponsiveContainer width="100%" height={60}>
-                    <BarChart data={realtimeDataset.last48Hours}>
+                    <BarChart data={realtimeScaledBars}>
                       <Bar dataKey="views" fill="#35b7e6" radius={[1, 1, 0, 0]} isAnimationActive={false} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -848,27 +943,27 @@ const Analytics = () => {
                   <div className="realtime-top-content-section" style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#aaaaaa', marginBottom: '8px' }}>
                       <span>Top traffic sources</span>
-                      <span>Views</span>
+                      <span>% of views</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
                       <span>YouTube search</span>
-                      <span>47.5%</span>
+                      <span>{videoTrafficSources.search}%</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
                       <span>Browse features</span>
-                      <span>18.6%</span>
+                      <span>{videoTrafficSources.browse}%</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
                       <span>Channel pages</span>
-                      <span>14.2%</span>
+                      <span>{videoTrafficSources.channel}%</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
                       <span>Other YouTube features</span>
-                      <span>9.3%</span>
+                      <span>{videoTrafficSources.other}%</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
                       <span>External</span>
-                      <span>3.6%</span>
+                      <span>{videoTrafficSources.external}%</span>
                     </div>
                   </div>
                 ) : (
@@ -977,16 +1072,18 @@ const Analytics = () => {
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
-                    tickLine={false}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    tickMargin={10}
-                    minTickGap={25}
+                    tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    tickMargin={8}
+                    padding={{ left: 16, right: 16 }}
+                    interval={0}
+                    ticks={chartTicks}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatXAxisTick}
-                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
                     orientation="right"
@@ -994,11 +1091,20 @@ const Analytics = () => {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    width={45}
+                    width={48}
+                    allowDecimals={false}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatYAxisValue}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'} stroke="#818cf8" strokeWidth={1.5} fill="rgba(129, 140, 248, 0.15)" isAnimationActive={false} />
+                  <Area
+                    type="monotone"
+                    dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'}
+                    stroke="#818cf8"
+                    strokeWidth={1.75}
+                    fill="rgba(129, 140, 248, 0.15)"
+                    isAnimationActive={false}
+                  />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-content-${v.id}-${v.date}-${i}`}
@@ -1009,10 +1115,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
-                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                            <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
+                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -1169,16 +1275,18 @@ const Analytics = () => {
             <div className="chart-container-wrapper">
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
-                    tickLine={false}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    tickMargin={10}
-                    minTickGap={25}
+                    tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    tickMargin={8}
+                    padding={{ left: 16, right: 16 }}
+                    interval={0}
+                    ticks={chartTicks}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatXAxisTick}
-                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
                     orientation="right"
@@ -1186,11 +1294,20 @@ const Analytics = () => {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    width={45}
+                    width={48}
+                    allowDecimals={false}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatYAxisValue}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="watchTimeHrs" stroke="#ec4899" strokeWidth={1.5} fill="rgba(236, 72, 153, 0.15)" isAnimationActive={false} />
+                  <Area
+                    type="monotone"
+                    dataKey="watchTimeHrs"
+                    stroke="#ec4899"
+                    strokeWidth={1.75}
+                    fill="rgba(236, 72, 153, 0.15)"
+                    isAnimationActive={false}
+                  />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-engagement-${v.id}-${v.date}-${i}`}
@@ -1201,10 +1318,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
-                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                            <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
+                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -1241,7 +1358,13 @@ const Analytics = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0' }}>
                   <span style={{ color: '#aaa' }}>Average percentage viewed</span>
-                  <strong>29.3%</strong>
+                  <strong>
+                    {(() => {
+                      const dSecs = currentVideo.durationSecs || parseAvdToSeconds(currentVideo.duration, 618);
+                      const aSecs = currentVideo.avgViewDurationSecs || parseAvdToSeconds(currentVideo.avgViewDuration || currentVideo.avd, 105);
+                      return (dSecs > 0 && aSecs > 0) ? `${Math.min(100, Math.round((aSecs / dSecs) * 1000) / 10)}%` : '17.0%';
+                    })()}
+                  </strong>
                 </div>
                 <div style={{ marginTop: '16px' }}>
                   <div style={{ fontSize: '12px', fontWeight: '500', color: '#aaa', marginBottom: '8px' }}>Key moments for audience retention</div>
@@ -1518,7 +1641,7 @@ const Analytics = () => {
               <div className="hero-metric-item">
                 <span className="hero-label">Subscribers</span>
                 <span className="hero-val-row">
-                  {fmtS(isVideoMode ? (currentVideo.subscribersGained !== undefined ? currentVideo.subscribersGained : (currentVideo.netSubscribers !== undefined ? currentVideo.netSubscribers : aggregated.subscribersNet)) : (aggregated.subscribersNet || aggregated.subscribersGained || channelInfo.subscribersGainedLast28Days || 214))} <span className="gray-arrow-small">↓</span>
+                  {aggregated.subscribersNetFormatted || fmtS(isVideoMode ? (currentVideo.subscribersGained !== undefined ? currentVideo.subscribersGained : (currentVideo.netSubscribers !== undefined ? currentVideo.netSubscribers : aggregated.subscribersNet)) : (channelInfo.subscribersGainedLast28Days || aggregated.subscribersNet || 0))} <span className="gray-arrow-small">↓</span>
                   <span className="hero-subtext">In this period</span>
                 </span>
               </div>
@@ -1533,16 +1656,18 @@ const Analytics = () => {
                       <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
-                    tickLine={false}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    tickMargin={10}
-                    minTickGap={25}
+                    tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    tickMargin={8}
+                    padding={{ left: 16, right: 16 }}
+                    interval={0}
+                    ticks={chartTicks}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatXAxisTick}
-                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
                     orientation="right"
@@ -1550,12 +1675,21 @@ const Analytics = () => {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    width={45}
+                    width={48}
+                    allowDecimals={false}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatYAxisValue}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
-                  <Area type="monotone" dataKey="views" stroke="#a855f7" strokeWidth={1.5} fill="url(#colorPurple)" isAnimationActive={false} />
+                  <Area
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#a855f7"
+                    strokeWidth={1.75}
+                    fill="url(#colorPurple)"
+                    isAnimationActive={false}
+                  />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-audience-${v.id}-${v.date}-${i}`}
@@ -1566,10 +1700,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
-                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                            <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
+                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -1916,16 +2050,18 @@ const Analytics = () => {
                       <stop offset="95%" stopColor="#00c49f" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="#717171"
-                    tickLine={false}
-                    axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                    tickMargin={10}
-                    minTickGap={25}
+                    tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                    tickMargin={8}
+                    padding={{ left: 16, right: 16 }}
+                    interval={0}
+                    ticks={chartTicks}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={formatXAxisTick}
-                    ticks={selectedDateRange === 'first24' ? ['0', '4', '8', '12', '16', '20', '24 hours'] : undefined}
                   />
                   <YAxis
                     orientation="right"
@@ -1935,11 +2071,20 @@ const Analytics = () => {
                     tickMargin={8}
                     width={55}
                     domain={[0, 'auto']}
+                    allowDecimals={false}
+                    tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                     tickFormatter={v => `₹${formatYAxisValue(v)}`}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(0, 0, 0, 0.04)" isAnimationActive={false} />
-                  <Area type="monotone" dataKey="revenue" stroke="#00c49f" strokeWidth={1.5} fill="url(#colorTeal)" isAnimationActive={false} />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#00c49f"
+                    strokeWidth={1.75}
+                    fill="url(#colorTeal)"
+                    isAnimationActive={false}
+                  />
                   {videoUploadPoints.map((v, i) => (
                     <ReferenceDot
                       key={`marker-revenue-${v.id}-${v.date}-${i}`}
@@ -1950,10 +2095,10 @@ const Analytics = () => {
                       shape={(props) => {
                         if (!props.cx || !props.cy) return null;
                         return (
-                          <g transform={`translate(${props.cx - 10}, ${props.cy - 12})`} style={{ cursor: 'pointer' }}>
+                          <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
-                            <rect x="0" y="0" width="20" height="16" rx="3" fill="#212121" stroke="#555555" strokeWidth="1" />
-                            <polygon points="8,4 14,8 8,12" fill="#ffffff" />
+                            <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
+                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
                           </g>
                         );
                       }}
@@ -2112,14 +2257,17 @@ const Analytics = () => {
           <StudioCard title="Channel Growth Velocity & Velocity Trend" subtitle="Daily views compared with 14-day moving baseline">
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={daily} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
                 <XAxis
                   dataKey="date"
                   stroke="#717171"
-                  tickLine={false}
-                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                  tickMargin={10}
-                  minTickGap={25}
+                  tickLine={{ stroke: '#444444', strokeWidth: 1 }}
+                  axisLine={{ stroke: '#444444', strokeWidth: 1 }}
+                  tickMargin={8}
+                  padding={{ left: 16, right: 16 }}
+                  interval={0}
+                  ticks={chartTicks}
+                  tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                   tickFormatter={formatXAxisTick}
                 />
                 <YAxis
@@ -2128,11 +2276,20 @@ const Analytics = () => {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  width={45}
+                  width={48}
+                  allowDecimals={false}
+                  tick={{ fill: '#888888', fontSize: 11, fontFamily: 'Roboto, Inter, sans-serif' }}
                   tickFormatter={formatYAxisValue}
                 />
                 <Tooltip />
-                <Area type="monotone" dataKey="views" stroke="#ff9800" fill="rgba(255, 152, 0, 0.12)" strokeWidth={1.5} isAnimationActive={false} />
+                <Area
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#ff9800"
+                  strokeWidth={1.75}
+                  fill="rgba(255, 152, 0, 0.12)"
+                  isAnimationActive={false}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </StudioCard>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useStore, formatINR } from '../store/useStore';
+import { useStore, formatINR, fmtV, fmtW, fmtS } from '../store/useStore';
 import { StudioCheckBadge, StudioUpBadge, StudioDownBadge } from '../components/StudioBadges';
 import './Dashboard.css';
 
@@ -159,7 +159,7 @@ const Dashboard = () => {
                   <div className="stat-row lv-highlight-row">
                     <span className="stat-label lv-hl-label">Views</span>
                     <span className="stat-value lv-hl-val">
-                      {latestVideo.viewsFormatted || (latestVideo.views ? (latestVideo.views >= 1000 ? `${(latestVideo.views / 1000).toFixed(1)}K` : String(latestVideo.views)) : '45.1K')}
+                      {latestVideo.viewsFormatted || (latestVideo.views ? fmtV(latestVideo.views) : '0')}
                       <StudioUpBadge style={{ marginLeft: '6px' }} />
                     </span>
                   </div>
@@ -173,7 +173,7 @@ const Dashboard = () => {
                   <div className="stat-row lv-highlight-row">
                     <span className="stat-label lv-hl-label">Average view duration</span>
                     <span className="stat-value lv-hl-val">
-                      {latestVideo.avd || '1:45'}
+                      {latestVideo.avgViewDuration || latestVideo.avd || '1:45'}
                       <StudioDownBadge color="#aaaaaa" style={{ marginLeft: '6px' }} />
                     </span>
                   </div>
@@ -203,8 +203,8 @@ const Dashboard = () => {
           <div className="card-content">
             <div className="current-subs">
               <h3>Current subscribers</h3>
-              <div className="sub-count">{channelInfo?.subscribersFormatted || channelInfo?.subscribers?.toLocaleString() || '0'}</div>
-              <div className="sub-change">{channelInfo?.subscribersGainedLast28DaysFormatted || '+0'} in last 28 days</div>
+              <div className="sub-count">{channelInfo?.subscribersFormatted || (channelInfo?.subscribers ? channelInfo.subscribers.toLocaleString('en-IN') : '0')}</div>
+              <div className="sub-change">{channelInfo?.subscribersGainedLast28DaysFormatted || (channelInfo?.subscribersGainedLast28Days ? fmtS(channelInfo.subscribersGainedLast28Days) : '+0')} in last 28 days</div>
             </div>
             <div className="summary-section">
               <h3>Summary</h3>
@@ -212,21 +212,21 @@ const Dashboard = () => {
               <div className="stat-row">
                 <span className="stat-label">Views</span>
                 <span className="stat-value ana-stat-val">
-                  {channelInfo?.viewsLast28DaysFormatted || '0'}
+                  {channelInfo?.viewsLast28DaysFormatted || (channelInfo?.viewsLast28Days ? fmtV(channelInfo.viewsLast28Days) : '0')}
                   <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
               <div className="stat-row">
                 <span className="stat-label">Watch time (hours)</span>
                 <span className="stat-value ana-stat-val">
-                  {(channelInfo?.watchTimeLast28DaysFormatted || '0').replace(/\s*hrs\s*/gi, '')}
+                  {(channelInfo?.watchTimeLast28DaysFormatted || (channelInfo?.watchTimeLast28Days ? fmtW(channelInfo.watchTimeLast28Days) : '0')).replace(/\s*hrs\s*/gi, '')}
                   <StudioCheckBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
               <div className="stat-row">
                 <span className="stat-label">Estimated revenue</span>
                 <span className="stat-value ana-stat-val">
-                  {formatINR(channelInfo?.revenueLast28DaysFormatted || channelInfo?.revenueLast28Days || 0)}
+                  {channelInfo?.revenueLast28DaysFormatted ? formatINR(channelInfo.revenueLast28DaysFormatted) : formatINR(channelInfo?.revenueLast28Days || 0)}
                   <StudioUpBadge style={{ marginLeft: '6px' }} />
                 </span>
               </div>
@@ -237,7 +237,7 @@ const Dashboard = () => {
               {(videos || []).slice(0, 3).map(v => (
                 <div className="top-video-item" key={v.id} onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${v.id}`)}>
                   <span className="video-name">{v.title}</span>
-                  <span className="video-views">{v.viewsFormatted}</span>
+                  <span className="video-views">{v.viewsFormatted || fmtV(v.views)}</span>
                 </div>
               ))}
             </div>
@@ -294,7 +294,7 @@ const Dashboard = () => {
                 <div>
                   <b>{video.title}</b>
                   <span>
-                    <span className="pub-stat"><span className="material-symbols-outlined" style={{ fontSize: '13px' }}>bar_chart</span> {video.viewsFormatted || video.views?.toLocaleString() || '0'}</span>
+                    <span className="pub-stat"><span className="material-symbols-outlined" style={{ fontSize: '13px' }}>bar_chart</span> {video.viewsFormatted || (video.views ? fmtV(video.views) : '0')}</span>
                     <span className="pub-stat"><span className="material-symbols-outlined" style={{ fontSize: '13px' }}>comment</span> {video.comments?.toLocaleString() || 0}</span>
                     <span className="pub-stat"><span className="material-symbols-outlined" style={{ fontSize: '13px' }}>thumb_up</span> {video.likes?.toLocaleString() || 0}</span>
                   </span>

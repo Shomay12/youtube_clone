@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useStore } from '../store/useStore';
+import { useStore, fmtV, fmtW, fmtS, formatINR } from '../store/useStore';
 import { parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService';
 import { formatDateRangeText, formatSingleDate } from '../engine/AnalyticsSimulationEngine';
 import './CRM.css';
@@ -225,6 +225,58 @@ export default function CRM() {
     }
   }, [selectedVideoId, activeVideo]);
 
+  // Channel Realtime State Draft
+  const [channelRealtimeDraft, setChannelRealtimeDraft] = useState({
+    realtimeSubscribers: channelInfo?.realtimeSubscribers || channelInfo?.subscribers || 412850,
+    realtimeViews48h: channelInfo?.realtimeViews48h || Math.round((channelInfo?.viewsLast28Days || 1250000) * 0.0056),
+    realtimeViews60m: channelInfo?.realtimeViews60m || Math.round((channelInfo?.viewsLast28Days || 1250000) * 0.0006),
+  });
+
+  useEffect(() => {
+    if (channelInfo) {
+      setChannelRealtimeDraft({
+        realtimeSubscribers: channelInfo.realtimeSubscribers || channelInfo.subscribers || 412850,
+        realtimeViews48h: channelInfo.realtimeViews48h || Math.round((channelInfo.viewsLast28Days || 1250000) * 0.0056),
+        realtimeViews60m: channelInfo.realtimeViews60m || Math.round((channelInfo.viewsLast28Days || 1250000) * 0.0006),
+      });
+    }
+  }, [channelInfo]);
+
+  // Video Realtime State Draft
+  const [selectedRealtimeVideoId, setSelectedRealtimeVideoId] = useState(videos[0]?.id || 'vid_01');
+  const activeRealtimeVideo = useMemo(() => {
+    return videos.find(v => v.id === selectedRealtimeVideoId || String(v.id) === String(selectedRealtimeVideoId)) || videos[0];
+  }, [videos, selectedRealtimeVideoId]);
+
+  const [videoRealtimeDraft, setVideoRealtimeDraft] = useState({
+    realtimeViews48h: 183,
+    realtimeViews60m: 22,
+    trafficSources: {
+      search: 47.5,
+      browse: 18.6,
+      channel: 14.2,
+      other: 9.3,
+      external: 3.6
+    }
+  });
+
+  useEffect(() => {
+    if (activeRealtimeVideo) {
+      const vViews = Number(activeRealtimeVideo.views) || 0;
+      setVideoRealtimeDraft({
+        realtimeViews48h: activeRealtimeVideo.realtimeViews48h !== undefined ? activeRealtimeVideo.realtimeViews48h : Math.round(vViews * 0.0055),
+        realtimeViews60m: activeRealtimeVideo.realtimeViews60m !== undefined ? activeRealtimeVideo.realtimeViews60m : Math.round(vViews * 0.0006),
+        trafficSources: activeRealtimeVideo.realtimeTrafficSources || {
+          search: 47.5,
+          browse: 18.6,
+          channel: 14.2,
+          other: 9.3,
+          external: 3.6
+        }
+      });
+    }
+  }, [selectedRealtimeVideoId, activeRealtimeVideo]);
+
   const filteredVideos = useMemo(() =>
     videos.filter(v => v.title?.toLowerCase().includes(videoSearch.toLowerCase())),
     [videos, videoSearch]
@@ -378,6 +430,27 @@ export default function CRM() {
     showToast(`Video "${activeVideo.title?.slice(0, 24)}…" updated ✓ Reflecting across all Studio pages.`, 'success');
   }
 
+  function applyChannelRealtime() {
+    crmUpdateChannelMetrics({
+      realtimeSubscribers: Number(channelRealtimeDraft.realtimeSubscribers),
+      realtimeViews48h: Number(channelRealtimeDraft.realtimeViews48h),
+      realtimeViews60m: Number(channelRealtimeDraft.realtimeViews60m),
+    });
+    broadcastSync();
+    showToast('Channel Realtime metrics updated ✓ Reflecting in Live Rail', 'success');
+  }
+
+  function applyVideoRealtime() {
+    if (!activeRealtimeVideo) return;
+    updateVideoMetrics(activeRealtimeVideo.id, {
+      realtimeViews48h: Number(videoRealtimeDraft.realtimeViews48h),
+      realtimeViews60m: Number(videoRealtimeDraft.realtimeViews60m),
+      realtimeTrafficSources: videoRealtimeDraft.trafficSources
+    });
+    broadcastSync();
+    showToast(`Realtime metrics for "${activeRealtimeVideo.title?.slice(0, 24)}…" updated ✓`, 'success');
+  }
+
   function applyDates() {
     setSimulationAnchorDate(dateDraft.anchorDate, dateDraft.startDate, dateDraft.endDate);
     setDateRange(dateDraft.preset, dateDraft.startDate, dateDraft.endDate);
@@ -392,6 +465,7 @@ export default function CRM() {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
         if (activeSection === 'growth') applyVideoGrowthChanges();
+        else if (activeSection === 'realtime') { applyChannelRealtime(); applyVideoRealtime(); }
         else if (activeSection === 'channel') applyChannel();
         else if (activeSection === 'dates') applyDates();
         else if (activeSection === 'bulk') applyBulkMultiply();
@@ -399,7 +473,7 @@ export default function CRM() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, selectedVideoDraft, channelDraft, dateDraft, bulkFactor, bulkRPM, activeVideo]);
+  }, [activeSection, selectedVideoDraft, channelDraft, dateDraft, bulkFactor, bulkRPM, activeVideo, channelRealtimeDraft, videoRealtimeDraft, activeRealtimeVideo]);
 
   function autoCalculateEngagement() {
     const v = Number(selectedVideoDraft.views) || 0;
@@ -432,6 +506,7 @@ export default function CRM() {
 
   const navItems = [
     { key: 'growth',   icon: '🖼️', label: 'Thumbnails & Subs' },
+    { key: 'realtime', icon: '🔴', label: 'Realtime Analytics' },
     { key: 'videos',   icon: '🎬', label: 'Videos Manager' },
     { key: 'channel',  icon: '📡', label: 'Channel Metrics' },
     { key: 'dates',    icon: '📅', label: 'Dates & Range' },
@@ -477,7 +552,8 @@ export default function CRM() {
           <div>
             <h1 className="crm-title">{navItems.find(n => n.key === activeSection)?.label}</h1>
             <p className="crm-subtitle">
-              {activeSection === 'growth' && 'Edit per-video subscriber gain and replace thumbnails with live instant synchronization across Studio & Analytics'}
+              {activeSection === 'growth' && 'Edit per-video subscriber gain, publish dates and replace thumbnails with live instant synchronization across Studio & Analytics'}
+              {activeSection === 'realtime' && 'Control 48-hour live views, 60-minute views, subscriber ticker, and top traffic sources breakdown for both the overall channel and individual videos'}
               {activeSection === 'videos' && 'Edit per-video metrics — subscriber gains, thumbnails, views, likes & RPM'}
               {activeSection === 'channel' && 'Edit channel-level stats — changes reflect instantly in YouTube Studio'}
               {activeSection === 'dates' && 'Control simulation anchor dates, 28-day window (e.g. Jul 16 – Aug 12, 2026), and synchronize date axes across all graphs'}
@@ -839,6 +915,287 @@ export default function CRM() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── REALTIME ANALYTICS SECTION (OVERALL & PER-VIDEO) ── */}
+        {activeSection === 'realtime' && (
+          <div className="crm-section">
+            <div className="crm-grid-2">
+              {/* 1. Overall Channel Realtime Card */}
+              <div className="crm-card">
+                <div className="crm-card-header-flex">
+                  <div className="crm-card-title">📡 Overall Channel Realtime</div>
+                  <span className="crm-badge crm-badge-green">● Live Rail Sync</span>
+                </div>
+                <p className="crm-card-desc">
+                  Customize the live numbers that appear in the YouTube Studio Realtime sidebar on the Channel Overview page.
+                </p>
+
+                <div className="crm-field">
+                  <label className="crm-field-label">👥 Live Subscribers Count (Realtime Rail)</label>
+                  <input
+                    type="number"
+                    className="crm-input"
+                    value={channelRealtimeDraft.realtimeSubscribers}
+                    onChange={e => setChannelRealtimeDraft(d => ({ ...d, realtimeSubscribers: e.target.value }))}
+                  />
+                </div>
+
+                <div className="crm-grid-2" style={{ marginTop: 8 }}>
+                  <div className="crm-field">
+                    <label className="crm-field-label">👁️ Views · Last 48 Hours</label>
+                    <input
+                      type="number"
+                      className="crm-input"
+                      style={{ color: '#38bdf8', fontWeight: 600 }}
+                      value={channelRealtimeDraft.realtimeViews48h}
+                      onChange={e => setChannelRealtimeDraft(d => ({ ...d, realtimeViews48h: e.target.value }))}
+                    />
+                  </div>
+                  <div className="crm-field">
+                    <label className="crm-field-label">⏱️ Views · Last 60 Minutes</label>
+                    <input
+                      type="number"
+                      className="crm-input"
+                      value={channelRealtimeDraft.realtimeViews60m}
+                      onChange={e => setChannelRealtimeDraft(d => ({ ...d, realtimeViews60m: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <label className="crm-field-label">⚡ Quick 48h Boost Presets</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setChannelRealtimeDraft(d => ({ ...d, realtimeViews48h: Number(d.realtimeViews48h || 0) + 5000 }))}
+                    >
+                      +5,000 Views
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setChannelRealtimeDraft(d => ({ ...d, realtimeViews48h: Number(d.realtimeViews48h || 0) + 25000 }))}
+                    >
+                      +25,000 Views
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setChannelRealtimeDraft(d => ({ ...d, realtimeViews48h: Number(d.realtimeViews48h || 0) + 100000 }))}
+                    >
+                      +100,000 Views
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      style={{ color: '#f87171' }}
+                      onClick={() => setChannelRealtimeDraft(d => ({
+                        ...d,
+                        realtimeViews48h: Math.round((Number(channelDraft.viewsLast28Days) || 1250000) * 0.0056),
+                        realtimeViews60m: Math.round((Number(channelDraft.viewsLast28Days) || 1250000) * 0.0006)
+                      }))}
+                    >
+                      Reset to Auto Ratio
+                    </button>
+                  </div>
+                </div>
+
+                {/* Channel Realtime Preview Box */}
+                <div className="crm-preview-small" style={{ marginTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span>Realtime Subscribers Display:</span>
+                    <strong>{Number(channelRealtimeDraft.realtimeSubscribers).toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span>Realtime 48h Views Display:</span>
+                    <strong style={{ color: '#38bdf8' }}>{Number(channelRealtimeDraft.realtimeViews48h).toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Realtime 60m Views Display:</span>
+                    <strong style={{ color: '#a78bfa' }}>{Number(channelRealtimeDraft.realtimeViews60m).toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+
+                <button
+                  className="crm-apply-btn"
+                  style={{ marginTop: 16, width: '100%' }}
+                  onClick={applyChannelRealtime}
+                >
+                  💾 Apply Channel Realtime
+                </button>
+              </div>
+
+              {/* 2. Per-Video Realtime & Traffic Breakdown Card */}
+              <div className="crm-card">
+                <div className="crm-card-header-flex">
+                  <div className="crm-card-title">🎬 Per-Video Realtime & Traffic</div>
+                  <span className="crm-badge">{filteredVideos.length} Videos</span>
+                </div>
+                <p className="crm-card-desc">
+                  Select a specific video to customize its Realtime 48-hour views, 60-minute views, and top traffic sources breakdown.
+                </p>
+
+                {/* Video Selector Dropdown */}
+                <div className="crm-field">
+                  <label className="crm-field-label">Target Video</label>
+                  <select
+                    className="crm-input"
+                    value={selectedRealtimeVideoId}
+                    onChange={e => setSelectedRealtimeVideoId(e.target.value)}
+                    style={{ background: '#121224', color: '#f8fafc', fontWeight: 500 }}
+                  >
+                    {videos.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.title?.slice(0, 50)} ({v.viewsFormatted || fmt(v.views)} views)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="crm-grid-2" style={{ marginTop: 8 }}>
+                  <div className="crm-field">
+                    <label className="crm-field-label">👁️ Video 48h Views</label>
+                    <input
+                      type="number"
+                      className="crm-input"
+                      style={{ color: '#38bdf8', fontWeight: 600 }}
+                      value={videoRealtimeDraft.realtimeViews48h}
+                      onChange={e => setVideoRealtimeDraft(d => ({ ...d, realtimeViews48h: e.target.value }))}
+                    />
+                  </div>
+                  <div className="crm-field">
+                    <label className="crm-field-label">⏱️ Video 60m Views</label>
+                    <input
+                      type="number"
+                      className="crm-input"
+                      value={videoRealtimeDraft.realtimeViews60m}
+                      onChange={e => setVideoRealtimeDraft(d => ({ ...d, realtimeViews60m: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Traffic Sources Breakdown */}
+                <div style={{ marginTop: 12 }}>
+                  <label className="crm-field-label">📊 Top Traffic Sources Breakdown (% of Views)</label>
+                  <div className="crm-grid-2" style={{ marginTop: 6, gap: 8 }}>
+                    <div className="crm-field">
+                      <label className="crm-field-label" style={{ fontSize: 11 }}>YouTube Search %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="crm-input"
+                        value={videoRealtimeDraft.trafficSources?.search ?? 47.5}
+                        onChange={e => setVideoRealtimeDraft(d => ({ ...d, trafficSources: { ...d.trafficSources, search: parseFloat(e.target.value) || 0 } }))}
+                      />
+                    </div>
+                    <div className="crm-field">
+                      <label className="crm-field-label" style={{ fontSize: 11 }}>Browse Features %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="crm-input"
+                        value={videoRealtimeDraft.trafficSources?.browse ?? 18.6}
+                        onChange={e => setVideoRealtimeDraft(d => ({ ...d, trafficSources: { ...d.trafficSources, browse: parseFloat(e.target.value) || 0 } }))}
+                      />
+                    </div>
+                    <div className="crm-field">
+                      <label className="crm-field-label" style={{ fontSize: 11 }}>Channel Pages %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="crm-input"
+                        value={videoRealtimeDraft.trafficSources?.channel ?? 14.2}
+                        onChange={e => setVideoRealtimeDraft(d => ({ ...d, trafficSources: { ...d.trafficSources, channel: parseFloat(e.target.value) || 0 } }))}
+                      />
+                    </div>
+                    <div className="crm-field">
+                      <label className="crm-field-label" style={{ fontSize: 11 }}>Other YouTube %</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="crm-input"
+                        value={videoRealtimeDraft.trafficSources?.other ?? 9.3}
+                        onChange={e => setVideoRealtimeDraft(d => ({ ...d, trafficSources: { ...d.trafficSources, other: parseFloat(e.target.value) || 0 } }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div style={{ marginTop: 12 }}>
+                  <label className="crm-field-label">⚡ Traffic Source Presets</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setVideoRealtimeDraft(d => ({
+                        ...d,
+                        trafficSources: { search: 78.5, browse: 10.2, channel: 6.1, other: 3.2, external: 2.0 }
+                      }))}
+                    >
+                      🔥 High Search Spike (78.5%)
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setVideoRealtimeDraft(d => ({
+                        ...d,
+                        trafficSources: { search: 22.0, browse: 58.4, channel: 11.2, other: 5.4, external: 3.0 }
+                      }))}
+                    >
+                      📈 Suggested / Browse Boom (58.4%)
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-mini-pill"
+                      onClick={() => setVideoRealtimeDraft(d => ({
+                        ...d,
+                        trafficSources: { search: 47.5, browse: 18.6, channel: 14.2, other: 9.3, external: 3.6 }
+                      }))}
+                    >
+                      Default Distribution
+                    </button>
+                  </div>
+                </div>
+
+                {/* Video Realtime Preview Box */}
+                <div className="crm-preview-small" style={{ marginTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span>Selected Video:</span>
+                    <strong style={{ color: '#fbbf24' }}>{activeRealtimeVideo?.title?.slice(0, 30)}…</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span>Realtime 48h Views:</span>
+                    <strong style={{ color: '#38bdf8' }}>{Number(videoRealtimeDraft.realtimeViews48h).toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Top Traffic Source:</span>
+                    <strong style={{ color: '#4ade80' }}>YouTube search ({videoRealtimeDraft.trafficSources?.search}%)</strong>
+                  </div>
+                </div>
+
+                <div className="crm-button-action-row" style={{ marginTop: 16 }}>
+                  <button
+                    className="crm-apply-btn"
+                    onClick={applyVideoRealtime}
+                  >
+                    💾 Apply Video Realtime
+                  </button>
+                  <a
+                    href={`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/analytics/tab-overview/period-last-28-days?video=${activeRealtimeVideo?.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="crm-btn crm-btn-edit"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 18px', borderRadius: '10px' }}
+                  >
+                    <span>📈 View Live Rail ↗</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

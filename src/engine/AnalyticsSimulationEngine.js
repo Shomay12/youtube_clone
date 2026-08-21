@@ -24,42 +24,42 @@ export const CHANNEL_BENCHMARKS = {
 };
 
 export const VIDEO_ID_TO_DATE = {
-  'VID001': '2026-08-16',
-  'VID002': '2026-08-12',
-  'VID003': '2026-08-08',
-  'VID004': '2026-08-04',
-  'VID005': '2026-07-31',
-  'VID006': '2026-07-27',
-  'VID007': '2026-07-23',
-  'VID008': '2026-07-19',
-  'VID009': '2026-07-15',
-  'VID010': '2026-07-11'
+  'VID001': '2026-08-11',
+  'VID002': '2026-08-07',
+  'VID003': '2026-07-21',
+  'VID004': '2026-07-12',
+  'VID005': '2026-06-02',
+  'VID006': '2026-04-28',
+  'VID007': '2026-04-10',
+  'VID008': '2026-03-22',
+  'VID009': '2026-03-15',
+  'VID010': '2026-02-18'
 };
 
 export const TITLE_TO_SCHEDULE_DATE = {
-  'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-08-16',
-  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-08-12',
-  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-08-08',
-  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-08-04',
-  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-07-31',
-  'Make AI Videos Using Notebook LM': '2026-07-27',
-  'Raj Shamani Business Idea': '2026-07-23',
-  'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-07-19',
-  'This AI Saved Me 20 Hours': '2026-07-15',
-  'My Biggest AI Project Yet': '2026-07-11'
+  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-08-11',
+  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-08-07',
+  'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-07-21',
+  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-07-12',
+  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-06-02',
+  'Make AI Videos Using Notebook LM': '2026-04-28',
+  'Raj Shamani Business Idea': '2026-04-10',
+  'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-03-22',
+  'This AI Saved Me 20 Hours': '2026-03-15',
+  'My Biggest AI Project Yet': '2026-02-18'
 };
 
 export const VIDEO_PUBLISH_SCHEDULE = [
-  '2026-08-16',
-  '2026-08-12',
-  '2026-08-08',
-  '2026-08-04',
-  '2026-07-31',
-  '2026-07-27',
-  '2026-07-23',
-  '2026-07-19',
-  '2026-07-15',
-  '2026-07-11'
+  '2026-08-11',
+  '2026-08-07',
+  '2026-07-21',
+  '2026-07-12',
+  '2026-06-02',
+  '2026-04-28',
+  '2026-04-10',
+  '2026-03-22',
+  '2026-03-15',
+  '2026-02-18'
 ];
 
 export const RAW_VIDEOS = [
@@ -75,7 +75,7 @@ export const RAW_VIDEOS = [
     ctr: 8.9,
     rpm: 435.066426,
     cpm: 791.03,
-    publishDate: '2026-08-16',
+    publishDate: '2026-07-21',
     thumbnail: '/thumbnails/latest_video.png',
     category: 'Entertainment',
     watchTimeHrs: 52346,
@@ -99,7 +99,7 @@ export const RAW_VIDEOS = [
     ctr: 7.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-08-12',
+    publishDate: '2026-08-11',
     thumbnail: '/thumbnails/2.webp',
     category: 'Entertainment'
   },
@@ -115,7 +115,7 @@ export const RAW_VIDEOS = [
     ctr: 6.4,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-08-08',
+    publishDate: '2026-08-07',
     thumbnail: '/thumbnails/3.webp',
     category: 'Entertainment'
   },
@@ -131,7 +131,7 @@ export const RAW_VIDEOS = [
     ctr: 6.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-08-04',
+    publishDate: '2026-07-12',
     thumbnail: '/thumbnails/4.webp',
     category: 'Education'
   },
@@ -304,52 +304,98 @@ export function formatDateRangeText(startDateInput, endDateInput) {
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16') {
-  const today = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T00:00:00Z`);
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16', videosList = null) {
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-16';
+  const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const dailyData = [];
+
+  const videoList = (videosList && videosList.length > 0) ? videosList : PROCESSED_VIDEOS;
+
+  // Build a map of upload dates and their relative weights
+  const uploadDates = new Map();
+  videoList.forEach(v => {
+    const pDate = v.publishDate || v.date;
+    if (pDate) {
+      uploadDates.set(pDate, (uploadDates.get(pDate) || 0) + 1.0);
+    }
+  });
 
   let cumulativeSubs = 280000;
 
   for (let i = daysCount - 1; i >= 0; i--) {
     const d = new Date(today);
-    d.setDate(d.getDate() - i);
+    d.setUTCDate(d.getUTCDate() - i);
     const dateStr = d.toISOString().split('T')[0];
     const dayOfWeek = d.getUTCDay(); // 0 = Sun, 6 = Sat
 
-    // Weekend multiplier (subtle +8% lift on weekends)
+    // Weekend multiplier (subtle +6% lift on weekends)
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.08 : 1.0;
+    const weekendMultiplier = isWeekend ? 1.06 : 1.0;
 
-    // Gentle natural growth incline over time (+18% across 365 days)
-    const timeProgress = (daysCount - 1 - i) / (daysCount - 1);
-    const growthIncline = 0.90 + timeProgress * 0.20;
+    // Organic baseline micro-variation (gentle ±3% fluctuation, not repetitive ripples)
+    const microVariation = 1.0 + 0.03 * Math.sin(i * 0.43 + 1.2) - 0.02 * Math.cos(i * 0.77 + 0.4);
 
-    // Organic sine fluctuation for smooth, realistic wave variation
-    const seasonalFactor = 1 + 0.04 * Math.sin((i / 365) * 2 * Math.PI);
-    const roughness = 1.0 + 0.04 * Math.sin(i * 1.5 + 0.4) + 0.025 * Math.cos(i * 2.8 + 1.1);
-
-    // Realistic, gentle upload day lift (+16% bump, decaying softly next day)
-    let uploadBoost = 1.0;
-    PROCESSED_VIDEOS.forEach(v => {
-      if (v.publishDate === dateStr) {
-        uploadBoost += 0.16;
+    // Calculate upload spikes and realistic exponential decay trailing off
+    let uploadMultiplier = 0.0;
+    uploadDates.forEach((weight, uDate) => {
+      const uTime = new Date(`${uDate}T00:00:00Z`).getTime();
+      const cTime = d.getTime();
+      const diffDays = Math.round((cTime - uTime) / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) {
+        uploadMultiplier += 3.6 * weight; // Rise on upload day
+      } else if (diffDays === 1) {
+        uploadMultiplier += 5.1 * weight; // Peak on next day
+      } else if (diffDays === 2) {
+        uploadMultiplier += 2.6 * weight; // 2 days after
+      } else if (diffDays === 3) {
+        uploadMultiplier += 1.7 * weight; // 3 days after
+      } else if (diffDays === 4) {
+        uploadMultiplier += 1.2 * weight; // 4 days after
+      } else if (diffDays === 5) {
+        uploadMultiplier += 0.9 * weight; // 5 days after
+      } else if (diffDays === 6) {
+        uploadMultiplier += 0.7 * weight; // 6 days after
+      } else if (diffDays === 7) {
+        uploadMultiplier += 0.5 * weight; // 7 days after
+      } else if (diffDays > 7 && diffDays <= 14) {
+        uploadMultiplier += 0.35 * weight * Math.exp(-(diffDays - 7) * 0.4);
       }
     });
 
-    const baseDailyViews = Math.round(78000 * growthIncline * weekendMultiplier * seasonalFactor * roughness * uploadBoost);
-    const ctr = parseFloat((7.8 + 0.5 * Math.sin(i * 2.3 + 0.7)).toFixed(1));
+    // Natural sudden random spikes & jitter per date
+    let seed = 0;
+    for (let c = 0; c < dateStr.length; c++) {
+      seed = (seed * 31 + dateStr.charCodeAt(c)) & 0xffffffff;
+    }
+    const pseudoRand1 = ((seed & 0xffff) / 65535);
+    const pseudoRand2 = (((seed >> 16) & 0xffff) / 65535);
+
+    // Sudden dramatic random spikes (viral search & algorithm pushes)
+    let spikeBoost = 0.0;
+    if (pseudoRand1 > 0.84) {
+      spikeBoost = 2.8 + pseudoRand2 * 2.4; // Major sudden spike (3.8x - 5.2x)
+    } else if (pseudoRand1 > 0.66) {
+      spikeBoost = 1.3 + pseudoRand2 * 1.5; // Moderate sudden spike (2.3x - 2.8x)
+    } else if (pseudoRand1 > 0.45) {
+      spikeBoost = 0.35 + pseudoRand2 * 0.45; // Subtle organic lift
+    }
+
+    const dailyJitter = 0.88 + pseudoRand2 * 0.24;
+
+    const baseDailyViews = Math.round(18000 * (1.0 + uploadMultiplier + spikeBoost) * weekendMultiplier * dailyJitter);
+    const ctr = parseFloat((7.8 + 0.3 * Math.sin(i * 1.3 + 0.7)).toFixed(1));
     const impressions = Math.round(baseDailyViews / (ctr / 100));
 
-    const avgDurationSecs = Math.round(240 + 15 * Math.cos(i * 1.1 + 0.3));
+    const avgDurationSecs = Math.round(240 + 10 * Math.cos(i * 0.9 + 0.3));
     const watchTimeHrs = parseFloat((baseDailyViews * (avgDurationSecs / 3600)).toFixed(1));
 
     // Daily RPM around $33.64 average
-    const rpm = parseFloat((33.64 + 0.8 * Math.sin(i * 1.9 + 1.2)).toFixed(2));
+    const rpm = parseFloat((33.64 + 0.5 * Math.sin(i * 1.1 + 1.2)).toFixed(2));
     const cpm = parseFloat((rpm * 1.72).toFixed(2));
     const revenue = parseFloat(((baseDailyViews / 1000) * rpm).toFixed(2));
 
-    const subsGained = Math.round(baseDailyViews * 0.012 * (1.0 + 0.04 * Math.sin(i * 2.8)));
-    const subsLost = Math.round(subsGained * (0.12 + 0.01 * Math.cos(i * 1.7)));
+    const subsGained = Math.round(baseDailyViews * 0.012);
+    const subsLost = Math.round(subsGained * 0.12);
     cumulativeSubs += (subsGained - subsLost);
 
     const likes = Math.round(baseDailyViews * 0.044);
