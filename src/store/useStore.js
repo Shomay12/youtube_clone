@@ -113,9 +113,9 @@ export function distributeWithRealtimeEnd(weights, totalViews, targetEndViews, i
   return result;
 }
 
-const INITIAL_ANCHOR_DATE = '2026-08-20';
+const INITIAL_ANCHOR_DATE = '2026-08-21';
 const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
-const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-24', '2026-08-20');
+const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-25', '2026-08-21');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
 
 // Baseline lifetime totals from the original simulation data
@@ -272,10 +272,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-08-20',
+      simulationAnchorDate: '2026-08-21',
       selectedDateRange: 'last28',
-      customStartDate: '2026-07-24',
-      customEndDate: '2026-08-20',
+      customStartDate: '2026-07-25',
+      customEndDate: '2026-08-21',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -360,18 +360,20 @@ export const useStore = create(
         set(state => {
           const updates = { 
             selectedDateRange: rangeKey,
-            dateRangeVersion: (state.dateRangeVersion || 0) + 1
+            dateRangeVersion: (state.dateRangeVersion || 0) + 1,
+            hasCrmOverrides: true
           };
           if (customStart) updates.customStartDate = customStart;
           if (customEnd) updates.customEndDate = customEnd;
           return updates;
         });
+        get().persistToDatabase();
       },
 
-      // Set simulation anchor date (e.g. '2026-08-16') and update date ranges
+      // Set simulation anchor date (e.g. '2026-08-21') and update date ranges
       setSimulationAnchorDate: (anchorDate, customStart = null, customEnd = null) => {
         set(state => {
-          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-16';
+          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
           let startStr = customStart;
           if (!startStr) {
             const d = new Date(`${cleanAnchor}T00:00:00Z`);
@@ -440,7 +442,7 @@ export const useStore = create(
       getAnalyticsForRange: (rangeKey = null, videoId = null) => {
         const state = get();
         const activeKey = rangeKey || state.selectedDateRange;
-        const anchorDateStr = state.simulationAnchorDate || '2026-08-16';
+        const anchorDateStr = state.simulationAnchorDate || '2026-08-21';
         const today = new Date(anchorDateStr.includes('T') ? anchorDateStr : `${anchorDateStr}T00:00:00Z`);
 
         const formatDate = (d) => d.toISOString().split('T')[0];
@@ -451,7 +453,7 @@ export const useStore = create(
         };
 
         const todayStr = formatDate(today);
-        let startStr = '2026-07-20';
+        let startStr = '2026-07-25';
         let endStr = todayStr;
 
         if (activeKey === 'today') {
@@ -468,8 +470,8 @@ export const useStore = create(
           startStr = formatDate(subDays(today, 6));
           endStr = todayStr;
         } else if (activeKey === 'last28') {
-          startStr = state.customStartDate ? state.customStartDate : formatDate(subDays(today, 27));
-          endStr = state.customEndDate ? state.customEndDate : todayStr;
+          startStr = (state.customStartDate && state.customEndDate && state.selectedDateRange === 'last28') ? state.customStartDate : formatDate(subDays(today, 27));
+          endStr = (state.customStartDate && state.customEndDate && state.selectedDateRange === 'last28') ? state.customEndDate : todayStr;
         } else if (activeKey === 'last90') {
           startStr = formatDate(subDays(today, 89));
           endStr = todayStr;
@@ -1226,7 +1228,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v11',
+      name: 'yt-studio-analytics-v12',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {

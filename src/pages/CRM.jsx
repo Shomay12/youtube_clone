@@ -47,6 +47,50 @@ const PRESET_THUMBNAILS = [
   { label: 'Matrix Code', url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80' }
 ];
 
+export function computeDatesForPreset(presetKey, anchorDate) {
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
+  const today = new Date(`${cleanAnchor}T00:00:00Z`);
+  const formatDate = (d) => d.toISOString().split('T')[0];
+  const subDays = (d, count) => {
+    const res = new Date(d);
+    res.setUTCDate(res.getUTCDate() - count);
+    return res;
+  };
+  const todayStr = formatDate(today);
+
+  if (presetKey === 'last28') {
+    return { start: formatDate(subDays(today, 27)), end: todayStr };
+  }
+  if (presetKey === 'last7') {
+    return { start: formatDate(subDays(today, 6)), end: todayStr };
+  }
+  if (presetKey === 'last90') {
+    return { start: formatDate(subDays(today, 89)), end: todayStr };
+  }
+  if (presetKey === '365') {
+    return { start: formatDate(subDays(today, 364)), end: todayStr };
+  }
+  if (presetKey === 'lifetime' || presetKey === 'since_published') {
+    return { start: '2025-08-01', end: todayStr };
+  }
+  if (presetKey === '2026') {
+    return { start: '2026-01-01', end: todayStr };
+  }
+  if (presetKey === '2025') {
+    return { start: '2025-01-01', end: '2025-12-31' };
+  }
+  if (presetKey === 'august') {
+    return { start: '2026-08-01', end: todayStr > '2026-08-31' ? '2026-08-31' : todayStr };
+  }
+  if (presetKey === 'july') {
+    return { start: '2026-07-01', end: '2026-07-31' };
+  }
+  if (presetKey === 'june') {
+    return { start: '2026-06-01', end: '2026-06-30' };
+  }
+  return null;
+}
+
 // ── sub-components ───────────────────────────────────────────────────────────
 const StatPreview = ({ label, value, color = '#a78bfa' }) => (
   <div className="crm-stat-preview">
@@ -327,9 +371,9 @@ export default function CRM() {
 
   // Date Range Draft State
   const [dateDraft, setDateDraft] = useState({
-    anchorDate: simulationAnchorDate || '2026-08-16',
-    startDate: customStartDate || '2026-07-20',
-    endDate: customEndDate || '2026-08-16',
+    anchorDate: simulationAnchorDate || '2026-08-21',
+    startDate: customStartDate || '2026-07-25',
+    endDate: customEndDate || '2026-08-21',
     preset: selectedDateRange || 'last28'
   });
 
@@ -391,9 +435,9 @@ export default function CRM() {
 
   useEffect(() => {
     setDateDraft({
-      anchorDate: simulationAnchorDate || '2026-08-16',
-      startDate: customStartDate || '2026-07-20',
-      endDate: customEndDate || '2026-08-16',
+      anchorDate: simulationAnchorDate || '2026-08-21',
+      startDate: customStartDate || '2026-07-25',
+      endDate: customEndDate || '2026-08-21',
       preset: selectedDateRange || 'last28'
     });
   }, [simulationAnchorDate, customStartDate, customEndDate, selectedDateRange]);
@@ -1730,15 +1774,25 @@ export default function CRM() {
                     onChange={e => {
                       const newAnchor = e.target.value;
                       if (newAnchor) {
-                        const d = new Date(`${newAnchor}T00:00:00Z`);
-                        d.setUTCDate(d.getUTCDate() - 27);
-                        const autoStart = d.toISOString().split('T')[0];
-                        setDateDraft(prev => ({
-                          ...prev,
-                          anchorDate: newAnchor,
-                          endDate: newAnchor,
-                          startDate: autoStart
-                        }));
+                        const bounds = computeDatesForPreset(dateDraft.preset, newAnchor);
+                        if (bounds) {
+                          setDateDraft(prev => ({
+                            ...prev,
+                            anchorDate: newAnchor,
+                            startDate: bounds.start,
+                            endDate: bounds.end
+                          }));
+                        } else {
+                          const d = new Date(`${newAnchor}T00:00:00Z`);
+                          d.setUTCDate(d.getUTCDate() - 27);
+                          const autoStart = d.toISOString().split('T')[0];
+                          setDateDraft(prev => ({
+                            ...prev,
+                            anchorDate: newAnchor,
+                            endDate: newAnchor,
+                            startDate: autoStart
+                          }));
+                        }
                       }
                     }}
                   />
@@ -1747,7 +1801,7 @@ export default function CRM() {
                 <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
                   <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick anchor presets:</span>
                   {[
-                    { label: 'Aug 12, 2026 (Default)', date: '2026-08-12' },
+                    { label: 'Aug 21, 2026 (Default)', date: '2026-08-21' },
                     { label: 'Aug 14, 2026', date: '2026-08-14' },
                     { label: 'Aug 4, 2026', date: '2026-08-04' },
                     { label: 'Jul 31, 2026', date: '2026-07-31' },
@@ -1758,15 +1812,25 @@ export default function CRM() {
                       type="button"
                       className={`crm-mini-pill ${dateDraft.anchorDate === p.date ? 'active-pill' : ''}`}
                       onClick={() => {
-                        const d = new Date(`${p.date}T00:00:00Z`);
-                        d.setUTCDate(d.getUTCDate() - 27);
-                        const autoStart = d.toISOString().split('T')[0];
-                        setDateDraft(prev => ({
-                          ...prev,
-                          anchorDate: p.date,
-                          endDate: p.date,
-                          startDate: autoStart
-                        }));
+                        const bounds = computeDatesForPreset(dateDraft.preset, p.date);
+                        if (bounds) {
+                          setDateDraft(prev => ({
+                            ...prev,
+                            anchorDate: p.date,
+                            startDate: bounds.start,
+                            endDate: bounds.end
+                          }));
+                        } else {
+                          const d = new Date(`${p.date}T00:00:00Z`);
+                          d.setUTCDate(d.getUTCDate() - 27);
+                          const autoStart = d.toISOString().split('T')[0];
+                          setDateDraft(prev => ({
+                            ...prev,
+                            anchorDate: p.date,
+                            endDate: p.date,
+                            startDate: autoStart
+                          }));
+                        }
                       }}
                     >
                       {p.label}
@@ -1788,7 +1852,24 @@ export default function CRM() {
                     className="crm-input"
                     style={{ background: '#121224', color: '#fff', cursor: 'pointer' }}
                     value={dateDraft.preset}
-                    onChange={e => setDateDraft(prev => ({ ...prev, preset: e.target.value }))}
+                    onChange={e => {
+                      const newPreset = e.target.value;
+                      if (newPreset === 'custom') {
+                        setDateDraft(prev => ({ ...prev, preset: 'custom' }));
+                      } else {
+                        const bounds = computeDatesForPreset(newPreset, dateDraft.anchorDate);
+                        if (bounds) {
+                          setDateDraft(prev => ({
+                            ...prev,
+                            preset: newPreset,
+                            startDate: bounds.start,
+                            endDate: bounds.end
+                          }));
+                        } else {
+                          setDateDraft(prev => ({ ...prev, preset: newPreset }));
+                        }
+                      }
+                    }}
                   >
                     <option value="last28">Last 28 days (Default)</option>
                     <option value="last7">Last 7 days</option>
@@ -1815,7 +1896,23 @@ export default function CRM() {
                       key={p.key}
                       type="button"
                       className={`crm-mini-pill ${dateDraft.preset === p.key ? 'active-pill' : ''}`}
-                      onClick={() => setDateDraft(prev => ({ ...prev, preset: p.key }))}
+                      onClick={() => {
+                        if (p.key === 'custom') {
+                          setDateDraft(prev => ({ ...prev, preset: 'custom' }));
+                        } else {
+                          const bounds = computeDatesForPreset(p.key, dateDraft.anchorDate);
+                          if (bounds) {
+                            setDateDraft(prev => ({
+                              ...prev,
+                              preset: p.key,
+                              startDate: bounds.start,
+                              endDate: bounds.end
+                            }));
+                          } else {
+                            setDateDraft(prev => ({ ...prev, preset: p.key }));
+                          }
+                        }
+                      }}
                     >
                       {p.label}
                     </button>
@@ -1837,7 +1934,7 @@ export default function CRM() {
                       className="crm-input"
                       type="date"
                       value={dateDraft.startDate}
-                      onChange={e => setDateDraft(prev => ({ ...prev, startDate: e.target.value }))}
+                      onChange={e => setDateDraft(prev => ({ ...prev, startDate: e.target.value, preset: 'custom' }))}
                     />
                   </div>
                   <div className="crm-field">
@@ -1846,7 +1943,7 @@ export default function CRM() {
                       className="crm-input"
                       type="date"
                       value={dateDraft.endDate}
-                      onChange={e => setDateDraft(prev => ({ ...prev, endDate: e.target.value }))}
+                      onChange={e => setDateDraft(prev => ({ ...prev, endDate: e.target.value, preset: 'custom' }))}
                     />
                   </div>
                 </div>
@@ -1854,7 +1951,7 @@ export default function CRM() {
                 <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
                   <span className="crm-field-label" style={{ marginBottom: 0 }}>28-day templates:</span>
                   {[
-                    { label: 'Jul 16 – Aug 12, 2026 (Default)', start: '2026-07-16', end: '2026-08-12' },
+                    { label: 'Jul 25 – Aug 21, 2026 (Default)', start: '2026-07-25', end: '2026-08-21' },
                     { label: 'Jul 18 – Aug 14, 2026', start: '2026-07-18', end: '2026-08-14' },
                     { label: 'Jul 7 – Aug 4, 2026', start: '2026-07-07', end: '2026-08-04' },
                     { label: 'Jun 18 – Jul 15, 2026', start: '2026-06-18', end: '2026-07-15' },
@@ -1867,7 +1964,8 @@ export default function CRM() {
                         ...prev,
                         startDate: t.start,
                         endDate: t.end,
-                        anchorDate: t.end
+                        anchorDate: t.end,
+                        preset: 'last28'
                       }))}
                     >
                       {t.label}
@@ -1905,14 +2003,14 @@ export default function CRM() {
                 className="crm-btn crm-btn-cancel"
                 onClick={() => {
                   setDateDraft({
-                    anchorDate: '2026-08-12',
-                    startDate: '2026-07-16',
-                    endDate: '2026-08-12',
+                    anchorDate: '2026-08-21',
+                    startDate: '2026-07-25',
+                    endDate: '2026-08-21',
                     preset: 'last28'
                   });
                 }}
               >
-                🔄 Reset to Jul 16 – Aug 12, 2026
+                🔄 Reset to Jul 25 – Aug 21, 2026
               </button>
             </div>
           </div>

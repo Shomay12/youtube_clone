@@ -338,8 +338,8 @@ export function interpolateCurve(nodes, progress, hardness = 1.0) {
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16', videosList = null, graphConfig = {}) {
-  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-16';
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-21', videosList = null, graphConfig = {}) {
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
   const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const dailyData = [];
 
@@ -470,18 +470,18 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-1
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-16');
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-21');
 
 /**
  * Filter daily metrics based on date range boundaries
  */
 export function filterDailyMetricsByRange(dailySeries, startDateStr, endDateStr) {
-  const start = new Date(startDateStr);
-  const end = new Date(endDateStr);
-  end.setHours(23, 59, 59, 999);
+  if (!dailySeries || !Array.isArray(dailySeries)) return [];
+  const start = String(startDateStr).split('T')[0];
+  const end = String(endDateStr).split('T')[0];
 
   return dailySeries.filter(item => {
-    const itemDate = new Date(item.date);
+    const itemDate = item.date ? String(item.date).split('T')[0] : '';
     return itemDate >= start && itemDate <= end;
   });
 }
@@ -636,7 +636,7 @@ export function getAudienceBreakdown(totalViews) {
 /**
  * Realtime continuous data generator (Last 60 minutes & Last 48 hours)
  */
-export function generateRealtimeDataset(anchorDate = '2026-08-16') {
+export function generateRealtimeDataset(anchorDate = '2026-08-21') {
   const last60Minutes = [];
   const now = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T12:00:00Z`);
 
