@@ -17,7 +17,9 @@ import {
   generateRealtimeDataset,
   tickRealtimeData,
   formatDateRangeText,
-  formatSingleDate
+  formatSingleDate,
+  getDeterministicRandom,
+  interpolateCurve
 } from '../engine/AnalyticsSimulationEngine.js';
 
 export const formatINR = (val) => {
@@ -60,6 +62,56 @@ export const fmtS = (s) => {
   if (Math.abs(num) >= 1_000) return `${prefix}${(num / 1_000).toFixed(1)}K`;
   return `${prefix}${num.toLocaleString('en-IN')}`;
 };
+
+export function distributeWithRealtimeEnd(weights, totalViews, targetEndViews, isPublishedArr = null) {
+  const n = weights.length;
+  if (n === 0) return [];
+  if (n === 1) return [totalViews];
+
+  // Identify valid published indices
+  const activeIndices = [];
+  weights.forEach((w, idx) => {
+    if (!isPublishedArr || isPublishedArr[idx]) {
+      activeIndices.push(idx);
+    }
+  });
+
+  if (activeIndices.length <= 1) {
+    return weights.map((w, idx) => (isPublishedArr && !isPublishedArr[idx]) ? 0 : totalViews);
+  }
+
+  const lastActiveIdx = activeIndices[activeIndices.length - 1];
+  const secondLastIdx = activeIndices.length >= 2 ? activeIndices[activeIndices.length - 2] : null;
+  const avgPerActive = Math.round(totalViews / activeIndices.length);
+
+  const earlierIndices = activeIndices.filter(idx => idx !== lastActiveIdx);
+  const earlierWeightSum = earlierIndices.reduce((acc, idx) => acc + (weights[idx] || 0.01), 0) || 1;
+
+  const rawEndRatio = (weights[lastActiveIdx] || 0.01) / (earlierWeightSum / earlierIndices.length || 1);
+  const endFromCurve = Math.round(avgPerActive * rawEndRatio);
+
+  // Ensure end views stay elevated as per realtime views velocity & user curve, never dipping
+  const endViews = Math.max(
+    targetEndViews || 0,
+    endFromCurve,
+    Math.round(avgPerActive * 0.95)
+  );
+
+  const remainingViews = Math.max(0, totalViews - endViews);
+  let currentSum = 0;
+  const result = new Array(n).fill(0);
+  earlierIndices.forEach(idx => {
+    const val = Math.round(remainingViews * ((weights[idx] || 0.01) / earlierWeightSum));
+    result[idx] = val;
+    currentSum += val;
+  });
+
+  const prevVal = secondLastIdx !== null ? result[secondLastIdx] : avgPerActive;
+  const finalEnd = Math.max(endViews, Math.round(prevVal * 0.85));
+
+  result[lastActiveIdx] = finalEnd;
+  return result;
+}
 
 const INITIAL_ANCHOR_DATE = '2026-08-20';
 const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
@@ -120,6 +172,12 @@ const EMPTY_STATE = {
     { id: 'n_1', title: 'System Design video reached 2.8M views!', message: 'Your video is trending #1 in Tech.', time: '1 hour ago', read: false }
   ],
   spreadsheetWarnings: [],
+  graphSettings: {
+    channelSpikiness: 1.0,
+    videoLaunchSpike: 4.5,
+    algorithmFrequency: 1.0,
+    spikinessPreset: 'spiky'
+  },
   settings: {
     currency: 'INR - Indian Rupee',
     theme: 'Dark',
@@ -322,12 +380,53 @@ export const useStore = create(
           }
           const endStr = customEnd ? customEnd : cleanAnchor;
           return {
+            hasCrmOverrides: true,
             simulationAnchorDate: cleanAnchor,
             customStartDate: startStr,
             customEndDate: endStr,
             dateRangeVersion: (state.dateRangeVersion || 0) + 1
           };
         });
+        get().persistToDatabase();
+      },
+
+      // Graph visual spikiness & curve controls (Channel & Per-Video with 7-node sculptors)
+      updateGraphSettings: (newSettings) => {
+        set(state => {
+          const current = state.graphSettings || {};
+          return {
+            hasCrmOverrides: true,
+            graphSettings: {
+              ...current,
+              ...newSettings,
+              channel: newSettings.channel ? { ...(current.channel || {}), ...newSettings.channel } : (current.channel || { spikiness: 1.0, algoFrequency: 1.0, uploadSurge: 1.0, hardness: 1.4, nodes: [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 1.2], preset: 'spiky' }),
+              videoDefaults: newSettings.videoDefaults ? { ...(current.videoDefaults || {}), ...newSettings.videoDefaults } : (current.videoDefaults || { launchSpike: 4.5, spikiness: 1.0, algoFrequency: 1.0, decayRate: 1.0, hardness: 1.4, nodes: [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 1.0], preset: 'standard' }),
+              perVideo: newSettings.perVideo ? { ...(current.perVideo || {}), ...newSettings.perVideo } : (current.perVideo || {})
+            },
+            dateRangeVersion: (state.dateRangeVersion || 0) + 1
+          };
+        });
+        get().persistToDatabase();
+      },
+
+      updateVideoGraphConfig: (videoId, config) => {
+        set(state => {
+          const current = state.graphSettings || {};
+          const perVideo = { ...(current.perVideo || {}) };
+          perVideo[videoId] = {
+            ...(perVideo[videoId] || current.videoDefaults || { launchSpike: 4.5, spikiness: 1.0, algoFrequency: 1.0, decayRate: 1.0, hardness: 1.4, nodes: [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 1.0], preset: 'standard' }),
+            ...config
+          };
+          return {
+            hasCrmOverrides: true,
+            graphSettings: {
+              ...current,
+              perVideo
+            },
+            dateRangeVersion: (state.dateRangeVersion || 0) + 1
+          };
+        });
+        get().persistToDatabase();
       },
 
       // Live realtime ticker tick function
@@ -402,7 +501,8 @@ export const useStore = create(
 
         // Dynamically generate daily time series ending at endStr (or anchorDateStr) so that
         // ANY date set in CRM (e.g. 2026-08-20, 2026-08-14, 2026-09-01) has complete, valid daily metrics
-        const dynamicDailySeries = generateDailyTimeSeries(365, endStr || anchorDateStr, state.videos);
+        const channelConfig = state.graphSettings?.channel || state.graphSettings || {};
+        const dynamicDailySeries = generateDailyTimeSeries(365, endStr || anchorDateStr, state.videos, channelConfig);
         const filteredDaily = filterDailyMetricsByRange(dynamicDailySeries, startStr, endStr);
         const agg = aggregateMetrics(filteredDaily, videoId);
         const formattedDateRange = formatDateRangeText(startStr, endStr);
@@ -435,53 +535,62 @@ export const useStore = create(
 
           const pubDateStr = targetVideo?.publishDate || targetVideo?.date || (TITLE_TO_SCHEDULE_DATE[targetVideo?.title] || VIDEO_ID_TO_DATE[targetVideo?.id] || '2026-08-16');
 
-          // In video analytics, views accumulate in an increasing curve from publish date to today without dipping
+          // In video analytics, compute realistic spiky daily views with launch spike, decay, and algorithm surges
           const activeItems = filteredDaily.filter(d => d.date >= pubDateStr);
           const numActive = activeItems.length;
 
-          let lastRatio = 0;
-          const ratioMap = new Map();
+          const vConfig = state.graphSettings?.perVideo?.[targetVideo?.id] || state.graphSettings?.videoDefaults || state.graphSettings || {};
+          const launchSpike = Number(vConfig.launchSpike ?? (state.graphSettings?.videoLaunchSpike ?? 4.5));
+          const vSpikiness = Number(vConfig.spikiness ?? (state.graphSettings?.channelSpikiness ?? 1.0));
+          const algoFreq = Number(vConfig.algoFrequency ?? (state.graphSettings?.algorithmFrequency ?? 1.0));
+          const decayFactor = Number(vConfig.decayRate ?? 1.0);
+          const vSeed = targetVideo?.id ? (String(targetVideo.id).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 997) : 42;
 
-          if (numActive > 0) {
-            let runningSum = 0;
-            const dailyIncrements = activeItems.map((d, k) => {
-              let seed = 0;
-              for (let c = 0; c < d.date.length; c++) seed = (seed * 31 + d.date.charCodeAt(c)) & 0xffffffff;
-              const r = ((seed & 0xffff) / 65535);
-              const progress = (k + 1) / numActive;
-              const earlyBoost = Math.exp(-progress * 2.0) * 1.8;
-              const randSpike = (r > 0.82) ? (2.0 + r * 3.0) : (r > 0.65 ? (0.8 + r * 1.2) : (0.05 + r * 0.15));
-              return 1.0 + earlyBoost + randSpike;
-            });
-            const totalInc = dailyIncrements.reduce((a, b) => a + b, 0) || 1;
+          const userNodes = (vConfig.nodes && Array.isArray(vConfig.nodes) && vConfig.nodes.length >= 2)
+            ? vConfig.nodes
+            : [1.0, launchSpike, 0.9, 3.8, 1.1, 2.5, 1.0];
+          const vHardness = Number(vConfig.hardness ?? 1.4);
 
-            activeItems.forEach((d, k) => {
-              runningSum += dailyIncrements[k];
-              const ratio = runningSum / totalInc;
-              ratioMap.set(d.date, Math.min(1.0, ratio));
-            });
-          } else {
-            // Video published before range: cumulative curve from ~0.20 to ~0.99 with sudden surge steps
-            let running = 0.20;
-            const remaining = 0.79;
-            const steps = filteredDaily.map((d) => {
-              let seed = 0;
-              for (let c = 0; c < d.date.length; c++) seed = (seed * 31 + d.date.charCodeAt(c)) & 0xffffffff;
-              const r = ((seed & 0xffff) / 65535);
-              return (r > 0.82) ? (2.5 + r * 3.5) : (0.4 + r * 0.8);
-            });
-            const totalStepWeight = steps.reduce((a, b) => a + b, 0) || 1;
+          const rawWeights = filteredDaily.map((d, k) => {
+            if (numActive > 0 && d.date < pubDateStr) return 0;
+            const progress = (k / (filteredDaily.length - 1 || 1));
+            const userCurveVal = interpolateCurve(userNodes, progress, vHardness);
 
-            filteredDaily.forEach((d, k) => {
-              running += (steps[k] / totalStepWeight) * remaining;
-              ratioMap.set(d.date, Math.min(0.995, running));
-            });
-          }
+            const uTime = new Date(`${pubDateStr}T00:00:00Z`).getTime();
+            const cTime = new Date(`${d.date}T00:00:00Z`).getTime();
+            const diffDays = Math.round((cTime - uTime) / (1000 * 60 * 60 * 24));
 
-          const scaledDaily = filteredDaily.map(d => {
-            const isPublished = (numActive > 0 ? d.date >= pubDateStr : true);
-            const ratio = isPublished ? (ratioMap.get(d.date) || 0) : 0;
-            const dViews = isPublished ? Math.round(videoViews * ratio) : 0;
+            let base = userCurveVal;
+            if (diffDays === 0) base = Math.max(base, 0.85 * launchSpike);
+            else if (diffDays === 1) base = Math.max(base, 1.20 * launchSpike);
+            else if (diffDays > 1 && diffDays <= 6) base = base * Math.exp(-(diffDays - 1) * 0.18 * decayFactor);
+
+            // Video-unique seed so every video has its own distinct signature
+            const r1 = getDeterministicRandom(d.date, vSeed + 11);
+            const r2 = getDeterministicRandom(d.date, vSeed + 22);
+            const r3 = getDeterministicRandom(d.date, vSeed + 33);
+
+            let algo = 0;
+            if (r1 > 0.80) algo = (1.6 + r2 * 2.0) * algoFreq;
+            else if (r1 > 0.56) algo = (0.5 + r2 * 0.9) * algoFreq;
+
+            const jitterSpread = Math.min(1.4, 0.70 * vSpikiness);
+            const jitter = Math.max(0.25, (1.0 - jitterSpread / 2) + r3 * jitterSpread);
+            return base * (1.0 + algo) * jitter;
+          });
+
+          const videoRealtime48h = (targetVideo?.realtimeViews48h !== undefined && targetVideo?.realtimeViews48h !== null && Number(targetVideo.realtimeViews48h) > 0)
+            ? Number(targetVideo.realtimeViews48h)
+            : Math.max(10, Math.round(videoViews * 0.055));
+          const targetVideoEndViews = Math.max(1, Math.round(videoRealtime48h * 0.50));
+
+          const isPublishedArr = filteredDaily.map(d => numActive > 0 ? d.date >= pubDateStr : true);
+          const computedVideoDailyViews = distributeWithRealtimeEnd(rawWeights, videoViews, targetVideoEndViews, isPublishedArr);
+
+          const scaledDaily = filteredDaily.map((d, k) => {
+            const isPublished = isPublishedArr[k];
+            const dViews = computedVideoDailyViews[k] || 0;
+            const ratio = (videoViews > 0 && isPublished) ? (dViews / videoViews) : 0;
             const dRev = isPublished ? parseFloat(((videoRevenue) * ratio).toFixed(2)) : 0;
             const dWatch = isPublished ? parseFloat(((videoWatchTime) * ratio).toFixed(1)) : 0;
             const dSubsNet = isPublished ? Math.round(videoSubsNet * ratio) : 0;
@@ -557,13 +666,21 @@ export const useStore = create(
         const revFmt   = (is28Days && ci.hasExplicitChannelMetrics && ci.revenueLast28DaysFormatted) ? formatINR(ci.revenueLast28DaysFormatted) : formatINR(finalRevenue);
         const subsFmt  = (is28Days && ci.hasExplicitChannelMetrics && ci.subscribersGainedLast28DaysFormatted) ? ci.subscribersGainedLast28DaysFormatted : fmtS(finalSubsNet);
 
-        // Scale daily chart proportionally so chart shape is preserved
-        const simDailyTotal = filteredDaily.reduce((acc, d) => acc + (d.views || 0), 0) || 1;
-        const scaledDaily = filteredDaily.map(d => {
-          const w = (d.views || 0) / simDailyTotal;
+        // Calculate target end views for channel from 48h realtime views velocity
+        const channelRealtime48h = (ci.realtimeViews48h !== undefined && ci.realtimeViews48h !== null && Number(ci.realtimeViews48h) > 0)
+          ? Number(ci.realtimeViews48h)
+          : (storeVideos.reduce((acc, v) => acc + (Number(v.realtimeViews48h) || 0), 0) || Math.max(100, Math.round(finalViews * 0.055)));
+        const targetChannelEndViews = Math.max(1, Math.round(channelRealtime48h * 0.50));
+
+        const channelWeights = filteredDaily.map(d => Math.max(0.01, d.views || 1));
+        const computedChannelDailyViews = distributeWithRealtimeEnd(channelWeights, finalViews, targetChannelEndViews, null);
+
+        const scaledDaily = filteredDaily.map((d, k) => {
+          const dViews = computedChannelDailyViews[k] || 0;
+          const w = finalViews > 0 ? (dViews / finalViews) : (1 / (filteredDaily.length || 1));
           return {
             ...d,
-            views:          Math.round(finalViews   * w),
+            views:          dViews,
             revenue:        parseFloat((finalRevenue * w).toFixed(2)),
             watchTimeHrs:   parseFloat((finalWatch   * w).toFixed(1)),
             subscribersNet: Math.round(finalSubsNet  * w),
@@ -613,12 +730,26 @@ export const useStore = create(
           const currentStore = get();
           const hasCrm = currentStore.hasCrmOverrides;
 
+          if (hasCrm) {
+            set({
+              mode: 'spreadsheet',
+              isSpreadsheetLoading: false,
+              lastSpreadsheetSync: status.lastLoadedAt || new Date().toISOString(),
+              spreadsheetConfig: {
+                source: status.source,
+                excelPath: status.excelPath,
+                googleSheetsId: status.googleSheetsId,
+                autoRefreshInterval: status.autoRefreshInterval,
+                liveSync: status.liveSync
+              },
+              spreadsheetError: null
+            });
+            return;
+          }
+
           set({
             ...parsedData,
-            // Preserve active CRM data overrides if present
-            channelInfo: hasCrm ? currentStore.channelInfo : parsedData.channelInfo,
-            videos: hasCrm ? currentStore.videos : parsedData.videos,
-            hasCrmOverrides: hasCrm,
+            hasCrmOverrides: false,
             mode: 'spreadsheet',
             isSpreadsheetLoading: false,
             lastSpreadsheetSync: status.lastLoadedAt || new Date().toISOString(),
@@ -1152,7 +1283,8 @@ export const useStore = create(
         dateRangeVersion: state.dateRangeVersion,
         hasCrmOverrides: state.hasCrmOverrides,
         channelInfo: state.channelInfo,
-        videos: state.videos
+        videos: state.videos,
+        graphSettings: state.graphSettings
       })
     }
   )

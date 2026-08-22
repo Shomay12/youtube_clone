@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore, fmtV, fmtW, fmtS, formatINR } from '../store/useStore';
 import { parseAvdToSeconds, formatSecondsToAvd } from '../services/InsforgeService';
-import { formatDateRangeText, formatSingleDate } from '../engine/AnalyticsSimulationEngine';
+import { formatDateRangeText, formatSingleDate, interpolateCurve } from '../engine/AnalyticsSimulationEngine';
 import './CRM.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -111,12 +111,206 @@ const CRMInput = ({ label, value, onChange, type = 'number', min, max, step = 1,
   );
 };
 
+// ── Visual Interactive Curve Preview & Sculptor Canvas ────────────────────────
+function VisualCurveCanvas({
+  nodes = [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 1.2],
+  hardness = 1.4,
+  color = '#38bdf8',
+  onNodeChange = null,
+  editable = true
+}) {
+  const svgRef = useRef(null);
+  const [activeDragIdx, setActiveDragIdx] = useState(null);
+  const [drawMode, setDrawMode] = useState(false);
+  const width = 560;
+  const height = 150;
+  const padding = 20;
+  const count = 50;
+  const points = [];
+
+  for (let i = 0; i <= count; i++) {
+    const progress = i / count;
+    const val = interpolateCurve(nodes, progress, hardness);
+    points.push({ progress, val });
+  }
+
+  const maxVal = Math.max(...points.map(p => p.val), ...nodes.map(n => Math.pow(Math.max(0.02, Number(n)), hardness)), 1.0);
+  const pathD = points.map((p, idx) => {
+    const x = padding + p.progress * (width - 2 * padding);
+    const y = height - padding - (p.val / maxVal) * (height - 2 * padding);
+    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ');
+
+  const fillD = `${pathD} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z`;
+  const nodeLabels = nodes.length === 7
+    ? ['Start (Data)', 'Early Surge', 'Dip 1', 'Main Peak', 'Dip 2', 'Late Surge', 'Today (Data)']
+    : nodes.map((_, idx) => idx === 0 ? 'Start' : (idx === nodes.length - 1 ? 'Today' : `N${idx + 1}`));
+
+  const calculateNodeValFromY = (clientY) => {
+    if (!svgRef.current) return 1.0;
+    const rect = svgRef.current.getBoundingClientRect();
+    const relY = clientY - rect.top;
+    const clampedY = Math.max(padding, Math.min(height - padding, relY));
+    const normalizedY = 1.0 - (clampedY - padding) / (height - 2 * padding);
+    const rawVal = Math.max(0.1, normalizedY * maxVal);
+    const nodeVal = Math.pow(rawVal, 1 / (Number(hardness) || 1.0));
+    return parseFloat(Math.min(10.0, Math.max(0.1, nodeVal)).toFixed(1));
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      const clientY = e.clientY ?? (e.touches && e.touches[0]?.clientY);
+      const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+      if (clientY === undefined) return;
+
+      if (activeDragIdx !== null && onNodeChange) {
+        const newVal = calculateNodeValFromY(clientY);
+        onNodeChange(activeDragIdx, newVal);
+      } else if (drawMode && svgRef.current && onNodeChange && clientX !== undefined) {
+        if (e.buttons === 1 || (e.touches && e.touches.length > 0)) {
+          const rect = svgRef.current.getBoundingClientRect();
+          const relX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+          const progress = relX / (rect.width || 1);
+          const targetNodeIdx = Math.min(nodes.length - 1, Math.max(0, Math.round(progress * (nodes.length - 1))));
+          const newVal = calculateNodeValFromY(clientY);
+          onNodeChange(targetNodeIdx, newVal);
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      setActiveDragIdx(null);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchmove', handlePointerMove);
+    window.addEventListener('touchend', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    };
+  }, [activeDragIdx, drawMode, nodes, hardness, maxVal, onNodeChange]);
+
+  return (
+    <div style={{ background: '#0a0a14', borderRadius: '12px', padding: '16px', border: '1px solid #1e1e38', marginBottom: '18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color, fontWeight: 700, fontSize: '13px' }}>● Interactive Waveform Sculptor</span>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>(Drag circles up/down on chart or use draw mode)</span>
+        </div>
+        {editable && onNodeChange && (
+          <button
+            type="button"
+            className={`crm-btn ${drawMode ? 'crm-btn-edit active-pill' : 'crm-btn-cancel'}`}
+            style={{ padding: '4px 10px', fontSize: '11px' }}
+            onClick={() => setDrawMode(!drawMode)}
+          >
+            {drawMode ? '✏️ Freehand Drawing Active' : '✍️ Enable Freehand Draw'}
+          </button>
+        )}
+      </div>
+
+      <svg
+        ref={svgRef}
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ overflow: 'visible', cursor: drawMode ? 'crosshair' : 'default', userSelect: 'none' }}
+      >
+        <defs>
+          <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.0} />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#333" strokeWidth="1" />
+        <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#1a1a2e" strokeDasharray="3 3" />
+        <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#1a1a2e" strokeDasharray="3 3" />
+
+        {/* Fill Area */}
+        <path d={fillD} fill={`url(#grad-${color.replace('#', '')})`} />
+        {/* Curve Line */}
+        <path d={pathD} fill="none" stroke={color} strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Node Control Handles */}
+        {nodes.map((nVal, nIdx) => {
+          const p = nIdx / (nodes.length - 1);
+          const rawVal = Math.pow(Math.max(0.02, Number(nVal)), hardness);
+          const x = padding + p * (width - 2 * padding);
+          const y = height - padding - (rawVal / maxVal) * (height - 2 * padding);
+          const isAnchor = nIdx === 0 || nIdx === nodes.length - 1;
+          const isDragging = activeDragIdx === nIdx;
+
+          return (
+            <g
+              key={nIdx}
+              style={{ cursor: editable ? 'ns-resize' : 'default' }}
+              onMouseDown={(e) => {
+                if (editable && !drawMode) {
+                  e.preventDefault();
+                  setActiveDragIdx(nIdx);
+                }
+              }}
+              onTouchStart={(e) => {
+                if (editable && !drawMode) {
+                  setActiveDragIdx(nIdx);
+                }
+              }}
+            >
+              {/* Target Hit Box */}
+              <circle cx={x} cy={y} r={16} fill="transparent" />
+              {/* Outer Glow on drag */}
+              {isDragging && <circle cx={x} cy={y} r={12} fill={color} opacity={0.3} />}
+              {/* Node Circle */}
+              <circle
+                cx={x}
+                cy={y}
+                r={isDragging ? 8 : (isAnchor ? 6 : 7)}
+                fill={isAnchor ? '#94a3b8' : color}
+                stroke="#0a0a14"
+                strokeWidth={2.5}
+              />
+              {/* Value Pill */}
+              <text
+                x={x}
+                y={Math.max(14, y - 9)}
+                fill={isDragging ? '#38bdf8' : (isAnchor ? '#94a3b8' : '#fff')}
+                fontSize="10"
+                fontWeight="700"
+                textAnchor="middle"
+              >
+                {Number(nVal).toFixed(1)}x
+              </text>
+              <text x={x} y={height - 4} fill="#64748b" fontSize="8.5" textAnchor="middle">
+                {nodeLabels[nIdx]}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '8px' }}>
+        <span>📅 Start Point (Data-Locked)</span>
+        <span style={{ color }}>{editable ? '↕ Click & Drag nodes vertically to shape spikes' : ''}</span>
+        <span style={{ color: '#4ade80', fontWeight: 600 }}>🎯 End Point (Realtime Velocity)</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main CRM Component ────────────────────────────────────────────────────────
 export default function CRM() {
   const {
     channelInfo, videos,
     simulationAnchorDate, selectedDateRange, customStartDate, customEndDate,
     setSimulationAnchorDate, setDateRange,
+    graphSettings, updateGraphSettings, updateVideoGraphConfig,
     crmUpdateChannelMetrics, updateVideoMetrics,
     bulkSetVideoRPM, bulkMultiplyViews,
     crmApplyPreset, reloadFromSpreadsheet,
@@ -138,6 +332,62 @@ export default function CRM() {
     endDate: customEndDate || '2026-08-16',
     preset: selectedDateRange || 'last28'
   });
+
+  // Graph Controls State (Channel & Per-Video with 7-Node Curve Sculptor)
+  const [selectedGraphVideoId, setSelectedGraphVideoId] = useState(videos[0]?.id || 'vid_01');
+
+  const [channelGraphDraft, setChannelGraphDraft] = useState({
+    spikiness: graphSettings?.channel?.spikiness ?? 1.0,
+    algoFrequency: graphSettings?.channel?.algoFrequency ?? 1.0,
+    uploadSurge: graphSettings?.channel?.uploadSurge ?? 1.0,
+    hardness: graphSettings?.channel?.hardness ?? 1.4,
+    nodes: graphSettings?.channel?.nodes ?? [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 1.2],
+    preset: graphSettings?.channel?.preset ?? 'spiky'
+  });
+
+  const [videoGraphDraft, setVideoGraphDraft] = useState({
+    launchSpike: 4.5,
+    spikiness: 1.0,
+    algoFrequency: 1.0,
+    decayRate: 1.0,
+    hardness: 1.4,
+    nodes: [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 1.0],
+    preset: 'standard'
+  });
+
+  useEffect(() => {
+    if (graphSettings?.channel) {
+      setChannelGraphDraft({
+        spikiness: graphSettings.channel.spikiness ?? 1.0,
+        algoFrequency: graphSettings.channel.algoFrequency ?? 1.0,
+        uploadSurge: graphSettings.channel.uploadSurge ?? 1.0,
+        hardness: graphSettings.channel.hardness ?? 1.4,
+        nodes: graphSettings.channel.nodes ?? [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 1.2],
+        preset: graphSettings.channel.preset ?? 'spiky'
+      });
+    }
+  }, [graphSettings?.channel]);
+
+  useEffect(() => {
+    const vCfg = graphSettings?.perVideo?.[selectedGraphVideoId] || graphSettings?.videoDefaults || {
+      launchSpike: 4.5,
+      spikiness: 1.0,
+      algoFrequency: 1.0,
+      decayRate: 1.0,
+      hardness: 1.4,
+      nodes: [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 1.0],
+      preset: 'standard'
+    };
+    setVideoGraphDraft({
+      launchSpike: vCfg.launchSpike ?? 4.5,
+      spikiness: vCfg.spikiness ?? 1.0,
+      algoFrequency: vCfg.algoFrequency ?? 1.0,
+      decayRate: vCfg.decayRate ?? 1.0,
+      hardness: vCfg.hardness ?? 1.4,
+      nodes: vCfg.nodes && vCfg.nodes.length >= 2 ? vCfg.nodes : [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 1.0],
+      preset: vCfg.preset ?? 'standard'
+    });
+  }, [selectedGraphVideoId, graphSettings?.perVideo, graphSettings?.videoDefaults]);
 
   useEffect(() => {
     setDateDraft({
@@ -367,7 +617,20 @@ export default function CRM() {
     try {
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel('yt-studio-sync');
-        bc.postMessage({ type: 'CRM_UPDATED', timestamp: Date.now() });
+        const st = useStore.getState();
+        bc.postMessage({
+          type: 'CRM_UPDATED',
+          state: {
+            channelInfo: st.channelInfo,
+            videos: st.videos,
+            graphSettings: st.graphSettings,
+            simulationAnchorDate: st.simulationAnchorDate,
+            selectedDateRange: st.selectedDateRange,
+            customStartDate: st.customStartDate,
+            customEndDate: st.customEndDate
+          },
+          timestamp: Date.now()
+        });
         bc.close();
       }
     } catch {}
@@ -459,6 +722,32 @@ export default function CRM() {
     showToast(`Date range set to "${label}" across all graphs ✓`, 'success');
   }
 
+  function applyChannelGraph() {
+    updateGraphSettings({ channel: channelGraphDraft });
+    broadcastSync();
+    showToast('Overall Channel graph dynamics applied ✓', 'success');
+  }
+
+  function applyVideoGraph() {
+    updateVideoGraphConfig(selectedGraphVideoId, videoGraphDraft);
+    broadcastSync();
+    const selV = videos.find(v => v.id === selectedGraphVideoId);
+    showToast(`Graph curve applied to "${selV?.title?.slice(0, 24) || 'video'}…" ✓`, 'success');
+  }
+
+  function applyVideoGraphToAll() {
+    const perVideo = {};
+    videos.forEach(v => {
+      perVideo[v.id] = { ...videoGraphDraft };
+    });
+    updateGraphSettings({
+      videoDefaults: { ...videoGraphDraft },
+      perVideo
+    });
+    broadcastSync();
+    showToast('Graph curve parameters applied to ALL videos ✓', 'success');
+  }
+
   // Global Keyboard Shortcuts (Cmd+S / Ctrl+S to save)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -468,12 +757,13 @@ export default function CRM() {
         else if (activeSection === 'realtime') { applyChannelRealtime(); applyVideoRealtime(); }
         else if (activeSection === 'channel') applyChannel();
         else if (activeSection === 'dates') applyDates();
+        else if (activeSection === 'graph') { applyChannelGraph(); applyVideoGraph(); }
         else if (activeSection === 'bulk') applyBulkMultiply();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, selectedVideoDraft, channelDraft, dateDraft, bulkFactor, bulkRPM, activeVideo, channelRealtimeDraft, videoRealtimeDraft, activeRealtimeVideo]);
+  }, [activeSection, selectedVideoDraft, channelDraft, dateDraft, channelGraphDraft, videoGraphDraft, selectedGraphVideoId, bulkFactor, bulkRPM, activeVideo, channelRealtimeDraft, videoRealtimeDraft, activeRealtimeVideo]);
 
   function autoCalculateEngagement() {
     const v = Number(selectedVideoDraft.views) || 0;
@@ -510,6 +800,7 @@ export default function CRM() {
     { key: 'videos',   icon: '🎬', label: 'Videos Manager' },
     { key: 'channel',  icon: '📡', label: 'Channel Metrics' },
     { key: 'dates',    icon: '📅', label: 'Dates & Range' },
+    { key: 'graph',    icon: '📈', label: 'Graph Controls' },
     { key: 'bulk',     icon: '⚡', label: 'Bulk Actions' },
     { key: 'preview',  icon: '👁️', label: 'Live Preview' },
   ];
@@ -557,6 +848,7 @@ export default function CRM() {
               {activeSection === 'videos' && 'Edit per-video metrics — subscriber gains, thumbnails, views, likes & RPM'}
               {activeSection === 'channel' && 'Edit channel-level stats — changes reflect instantly in YouTube Studio'}
               {activeSection === 'dates' && 'Control simulation anchor dates, 28-day window (e.g. Jul 16 – Aug 12, 2026), and synchronize date axes across all graphs'}
+              {activeSection === 'graph' && 'Fine-tune graph spikiness, individual video launch curves, algorithm surge frequencies, and presets'}
               {activeSection === 'bulk' && 'Apply batch changes across all videos at once'}
               {activeSection === 'preview' && 'Read-only live snapshot of current store values'}
             </p>
@@ -1622,6 +1914,675 @@ export default function CRM() {
               >
                 🔄 Reset to Jul 16 – Aug 12, 2026
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── GRAPH CONTROLS SECTION (CHANNEL & PER-VIDEO) ── */}
+        {activeSection === 'graph' && (
+          <div className="crm-section">
+            {/* ── CHANNEL GRAPH SCULPTOR ── */}
+            <div className="crm-card" style={{ marginBottom: 24 }}>
+              <div className="crm-card-header-flex">
+                <div>
+                  <div className="crm-card-title">📡 Overall Channel Graph Sculptor</div>
+                  <p className="crm-card-desc" style={{ marginTop: 4 }}>
+                    Directly sculpt the spikes, valleys, hardness, and end-point realtime velocity across all channel analytics. Drag circles directly on the canvas or use sliders below.
+                  </p>
+                </div>
+                <span className="crm-badge crm-badge-green">Channel Level</span>
+              </div>
+
+              {/* Interactive Drag & Draw Canvas Preview */}
+              <div style={{ marginTop: 14 }}>
+                <VisualCurveCanvas
+                  nodes={channelGraphDraft.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5]}
+                  hardness={channelGraphDraft.hardness || 1.4}
+                  color="#38bdf8"
+                  onNodeChange={(nodeIdx, newVal) => {
+                    setChannelGraphDraft(g => {
+                      const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                      n[nodeIdx] = newVal;
+                      return { ...g, nodes: n, preset: 'custom' };
+                    });
+                  }}
+                />
+              </div>
+
+              {/* Pro Waveform Presets */}
+              <div style={{ marginTop: 8 }}>
+                <span className="crm-field-label">Pro Waveform Presets:</span>
+                <div className="crm-preset-buttons" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                  {[
+                    { label: '⚡ Twin Peak Viral Surge', preset: 'double_peak', nodes: [1.0, 4.2, 0.8, 6.5, 1.2, 5.8, 3.2], hardness: 1.6, spikiness: 1.0, algo: 1.2 },
+                    { label: '🚀 Mega Viral Breakout (Center)', preset: 'center_viral', nodes: [0.8, 1.5, 1.0, 9.0, 1.8, 4.5, 3.0], hardness: 2.2, spikiness: 1.1, algo: 2.0 },
+                    { label: '🏔️ Triple Mountain Sawtooth', preset: 'triple_peak', nodes: [1.2, 5.0, 1.0, 5.5, 0.9, 4.8, 3.0], hardness: 1.8, spikiness: 1.3, algo: 1.5 },
+                    { label: '📈 Exponential Viral Ramp (High Today)', preset: 'ramp_up', nodes: [0.8, 1.2, 1.8, 2.5, 3.8, 5.5, 6.5], hardness: 1.5, spikiness: 0.9, algo: 1.8 },
+                    { label: '🌲 Evergreen Plateau & Strong Tail', preset: 'evergreen', nodes: [1.0, 3.0, 2.2, 2.8, 2.5, 2.9, 2.8], hardness: 1.1, spikiness: 0.7, algo: 0.8 },
+                    { label: '⚡ High Volatility Lightning Storm', preset: 'lightning', nodes: [1.0, 6.5, 0.4, 7.8, 0.5, 6.8, 3.5], hardness: 2.5, spikiness: 1.8, algo: 2.5 },
+                    { label: '🌊 Smooth Flowing Wave', preset: 'smooth_wave', nodes: [1.0, 2.5, 1.8, 3.5, 2.6, 3.2, 2.5], hardness: 1.0, spikiness: 0.4, algo: 0.4 }
+                  ].map(p => (
+                    <button
+                      key={p.preset}
+                      type="button"
+                      className={`crm-btn ${channelGraphDraft.preset === p.preset ? 'crm-btn-edit active-pill' : 'crm-btn-cancel'}`}
+                      style={{ padding: '10px 12px', fontSize: '12.5px', textAlign: 'left' }}
+                      onClick={() => setChannelGraphDraft(g => ({
+                        ...g,
+                        preset: p.preset,
+                        nodes: [...p.nodes],
+                        hardness: p.hardness,
+                        spikiness: p.spikiness,
+                        algoFrequency: p.algo
+                      }))}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 7 Interactive Node Sliders */}
+              <div style={{ marginTop: 20, background: '#121226', padding: '16px', borderRadius: '10px', border: '1px solid #1e1e38' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span className="crm-field-label" style={{ margin: 0, fontWeight: 700, color: '#e2e8f0' }}>
+                    ✍️ Sculpt Timeline Spike Nodes (Start → Middle Peaks & Dips → Today Endpoint)
+                  </span>
+                  <span style={{ fontSize: 11, color: '#4ade80' }}>✓ Live Realtime Endpoint Grounded</span>
+                </div>
+
+                <div className="crm-grid-3" style={{ gap: 12 }}>
+                  {/* Node 1 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0 }}>1. Start (Data Base)</label>
+                      <span style={{ color: '#94a3b8', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[0] || 1.0).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="4.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[0] || 1.0}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[0] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#94a3b8' }}
+                    />
+                  </div>
+
+                  {/* Node 2 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#38bdf8' }}>2. Early Surge (Spike 1)</label>
+                      <span style={{ color: '#38bdf8', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[1] || 3.5).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="8.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[1] || 3.5}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[1] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                    />
+                  </div>
+
+                  {/* Node 3 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#f43f5e' }}>3. Valley 1 (Dip)</label>
+                      <span style={{ color: '#f43f5e', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[2] || 0.9).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="6.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[2] || 0.9}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[2] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#f43f5e' }}
+                    />
+                  </div>
+
+                  {/* Node 4 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#a855f7' }}>4. Main Viral Peak (Spike 2)</label>
+                      <span style={{ color: '#a855f7', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[3] || 4.8).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="10.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[3] || 4.8}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[3] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#a855f7' }}
+                    />
+                  </div>
+
+                  {/* Node 5 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#f43f5e' }}>5. Valley 2 (Dip)</label>
+                      <span style={{ color: '#f43f5e', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[4] || 1.1).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="6.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[4] || 1.1}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[4] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#f43f5e' }}
+                    />
+                  </div>
+
+                  {/* Node 6 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#38bdf8' }}>6. Late Surge (Spike 3)</label>
+                      <span style={{ color: '#38bdf8', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[5] || 3.6).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="8.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[5] || 3.6}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[5] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                    />
+                  </div>
+
+                  {/* Node 7 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#4ade80' }}>7. Today (Realtime Endpoint)</label>
+                      <span style={{ color: '#4ade80', fontWeight: 600 }}>{Number(channelGraphDraft.nodes?.[6] || 2.5).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="8.0"
+                      step="0.1"
+                      value={channelGraphDraft.nodes?.[6] || 2.5}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setChannelGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5])];
+                          n[6] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#4ade80' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Hardness & Dynamics */}
+              <div className="crm-grid-3" style={{ marginTop: 16 }}>
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Spike Hardness & Sharpness</label>
+                    <span style={{ color: '#a855f7', fontWeight: 600 }}>{Number(channelGraphDraft.hardness || 1.4).toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="3.5"
+                    step="0.1"
+                    value={channelGraphDraft.hardness || 1.4}
+                    onChange={e => setChannelGraphDraft(g => ({ ...g, hardness: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#a855f7', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Smooth (1.0)</span>
+                    <span>Sharp Needles (3.5)</span>
+                  </div>
+                </div>
+
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Daily Jaggedness / Jitter</label>
+                    <span style={{ color: '#38bdf8', fontWeight: 600 }}>{Number(channelGraphDraft.spikiness).toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="2.5"
+                    step="0.05"
+                    value={channelGraphDraft.spikiness}
+                    onChange={e => setChannelGraphDraft(g => ({ ...g, spikiness: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Zero Noise (0.0x)</span>
+                    <span>Extreme (2.5x)</span>
+                  </div>
+                </div>
+
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Upload Day Surge Multiplier</label>
+                    <span style={{ color: '#4ade80', fontWeight: 600 }}>{Number(channelGraphDraft.uploadSurge).toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3.0"
+                    step="0.05"
+                    value={channelGraphDraft.uploadSurge}
+                    onChange={e => setChannelGraphDraft(g => ({ ...g, uploadSurge: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#4ade80', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Mild (0.5x)</span>
+                    <span>Huge (3.0x)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                <button className="crm-apply-btn" onClick={applyChannelGraph}>
+                  Apply Channel Graph Settings
+                </button>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-cancel"
+                  onClick={() => {
+                    setChannelGraphDraft({
+                      spikiness: 1.0,
+                      algoFrequency: 1.0,
+                      uploadSurge: 1.0,
+                      hardness: 1.4,
+                      nodes: [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 2.5],
+                      preset: 'spiky'
+                    });
+                  }}
+                >
+                  🔄 Reset Channel Default
+                </button>
+              </div>
+            </div>
+
+            {/* ── PER-VIDEO GRAPH SCULPTOR ── */}
+            <div className="crm-card">
+              <div className="crm-card-header-flex">
+                <div>
+                  <div className="crm-card-title">🎬 Individual Video Curve Sculptor</div>
+                  <p className="crm-card-desc" style={{ marginTop: 4 }}>
+                    Sculpt the launch peak, mid recommendation spikes, decay drop-off rate, and elevated realtime end point for any specific video.
+                  </p>
+                </div>
+                <span className="crm-badge crm-badge-blue">Per-Video Curve</span>
+              </div>
+
+              {/* Video Selector Dropdown */}
+              <div style={{ marginTop: 14, background: '#121226', padding: '14px', borderRadius: '10px', border: '1px solid #1e1e38' }}>
+                <label className="crm-field-label" style={{ marginBottom: 6 }}>Select Video to Sculpt:</label>
+                <select
+                  className="crm-input"
+                  value={selectedGraphVideoId}
+                  onChange={e => setSelectedGraphVideoId(e.target.value)}
+                  style={{ width: '100%', padding: '10px', background: '#0a0a14', color: '#e2e8f0', border: '1px solid #2a2a4a', borderRadius: '8px' }}
+                >
+                  {videos.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.title} ({v.viewsFormatted || Number(v.views).toLocaleString()} views)
+                    </option>
+                  ))}
+                </select>
+
+                {(() => {
+                  const selV = videos.find(v => v.id === selectedGraphVideoId) || videos[0];
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                      <img
+                        src={selV?.thumbnail || '/thumbnails/1.webp'}
+                        alt={selV?.title}
+                        style={{ width: 64, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid #333' }}
+                      />
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{selV?.title}</span>
+                        <div style={{ marginTop: 2 }}>Published: {selV?.publishDate || selV?.date || '2026-08-16'} • Views: {selV?.viewsFormatted || Number(selV?.views).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Interactive Video Canvas Preview */}
+              <div style={{ marginTop: 16 }}>
+                <VisualCurveCanvas
+                  nodes={videoGraphDraft.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5]}
+                  hardness={videoGraphDraft.hardness || 1.4}
+                  color="#a855f7"
+                  onNodeChange={(nodeIdx, newVal) => {
+                    setVideoGraphDraft(g => {
+                      const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                      n[nodeIdx] = newVal;
+                      return { ...g, nodes: n, preset: 'custom' };
+                    });
+                  }}
+                />
+              </div>
+
+              {/* 7 Node Sliders for Video */}
+              <div style={{ background: '#121226', padding: '16px', borderRadius: '10px', border: '1px solid #1e1e38', marginTop: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span className="crm-field-label" style={{ margin: 0, fontWeight: 700, color: '#e2e8f0' }}>
+                    ✍️ Sculpt Video Nodes (Launch Peak → Mid Recommendation Surges → Realtime Endpoint)
+                  </span>
+                  <span style={{ fontSize: 11, color: '#4ade80' }}>Endpoint anchored to Realtime Traffic</span>
+                </div>
+
+                <div className="crm-grid-3" style={{ gap: 12 }}>
+                  {/* Video Node 1 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0 }}>1. Launch Day (Base)</label>
+                      <span style={{ color: '#94a3b8', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[0] || 1.0).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="4.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[0] || 1.0}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[0] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#94a3b8' }}
+                    />
+                  </div>
+
+                  {/* Video Node 2 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#a855f7' }}>2. Launch Surge Peak</label>
+                      <span style={{ color: '#a855f7', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[1] || 4.5).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="10.0"
+                      step="0.25"
+                      value={videoGraphDraft.nodes?.[1] || 4.5}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[1] = val;
+                          return { ...g, nodes: n, launchSpike: val, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#a855f7' }}
+                    />
+                  </div>
+
+                  {/* Video Node 3 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#f43f5e' }}>3. Decay Dip</label>
+                      <span style={{ color: '#f43f5e', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[2] || 0.9).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="6.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[2] || 0.9}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[2] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#f43f5e' }}
+                    />
+                  </div>
+
+                  {/* Video Node 4 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#fbbf24' }}>4. Browse / Search Surge</label>
+                      <span style={{ color: '#fbbf24', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[3] || 3.8).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="10.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[3] || 3.8}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[3] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#fbbf24' }}
+                    />
+                  </div>
+
+                  {/* Video Node 5 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#f43f5e' }}>5. Mid Dip</label>
+                      <span style={{ color: '#f43f5e', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[4] || 1.1).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="6.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[4] || 1.1}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[4] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#f43f5e' }}
+                    />
+                  </div>
+
+                  {/* Video Node 6 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#38bdf8' }}>6. Recommendation Bump</label>
+                      <span style={{ color: '#38bdf8', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[5] || 2.5).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="8.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[5] || 2.5}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[5] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#38bdf8' }}
+                    />
+                  </div>
+
+                  {/* Video Node 7 */}
+                  <div className="crm-field">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label className="crm-field-label" style={{ margin: 0, color: '#4ade80' }}>7. Today (Realtime Endpoint)</label>
+                      <span style={{ color: '#4ade80', fontWeight: 600 }}>{Number(videoGraphDraft.nodes?.[6] || 2.5).toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="8.0"
+                      step="0.1"
+                      value={videoGraphDraft.nodes?.[6] || 2.5}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value);
+                        setVideoGraphDraft(g => {
+                          const n = [...(g.nodes || [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5])];
+                          n[6] = val;
+                          return { ...g, nodes: n, preset: 'custom' };
+                        });
+                      }}
+                      style={{ width: '100%', accentColor: '#4ade80' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Video Hardness & Decay */}
+              <div className="crm-grid-3" style={{ marginTop: 16 }}>
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Peak Hardness & Sharpness</label>
+                    <span style={{ color: '#a855f7', fontWeight: 600 }}>{Number(videoGraphDraft.hardness || 1.4).toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="3.5"
+                    step="0.1"
+                    value={videoGraphDraft.hardness || 1.4}
+                    onChange={e => setVideoGraphDraft(g => ({ ...g, hardness: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#a855f7', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Smooth (1.0)</span>
+                    <span>Sharp (3.5)</span>
+                  </div>
+                </div>
+
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Decay Drop-off Rate</label>
+                    <span style={{ color: '#f43f5e', fontWeight: 600 }}>{Number(videoGraphDraft.decayRate).toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="3.0"
+                    step="0.05"
+                    value={videoGraphDraft.decayRate}
+                    onChange={e => setVideoGraphDraft(g => ({ ...g, decayRate: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#f43f5e', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Sustained (0.2x)</span>
+                    <span>Fast Drop (3.0x)</span>
+                  </div>
+                </div>
+
+                <div className="crm-field">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="crm-field-label" style={{ margin: 0 }}>Daily Jitter / Noise</label>
+                    <span style={{ color: '#38bdf8', fontWeight: 600 }}>{Number(videoGraphDraft.spikiness).toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="2.5"
+                    step="0.05"
+                    value={videoGraphDraft.spikiness}
+                    onChange={e => setVideoGraphDraft(g => ({ ...g, spikiness: parseFloat(e.target.value), preset: 'custom' }))}
+                    style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    <span>Zero (0.0x)</span>
+                    <span>Extreme (2.5x)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 20 }}>
+                <button className="crm-apply-btn" onClick={applyVideoGraph}>
+                  Apply to Selected Video
+                </button>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-edit"
+                  style={{ background: '#1e1035', color: '#a78bfa' }}
+                  onClick={applyVideoGraphToAll}
+                >
+                  🌐 Apply this Curve to ALL Videos
+                </button>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-cancel"
+                  onClick={() => {
+                    setVideoGraphDraft({
+                      launchSpike: 4.5,
+                      spikiness: 1.0,
+                      algoFrequency: 1.0,
+                      decayRate: 1.0,
+                      hardness: 1.4,
+                      nodes: [1.0, 4.5, 0.9, 3.8, 1.1, 2.5, 2.5],
+                      preset: 'standard'
+                    });
+                  }}
+                >
+                  🔄 Reset Video Curve
+                </button>
+              </div>
             </div>
           </div>
         )}

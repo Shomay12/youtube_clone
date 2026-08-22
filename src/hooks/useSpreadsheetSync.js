@@ -34,10 +34,18 @@ export function useSpreadsheetSync() {
     if (syncChannel) {
       syncChannel.onmessage = (msg) => {
         if (msg.data?.type === 'CRM_UPDATED') {
-          if (useStore.persist?.rehydrate) {
-            useStore.persist.rehydrate();
+          if (msg.data.state) {
+            useStore.setState({
+              ...msg.data.state,
+              hasCrmOverrides: true,
+              dateRangeVersion: (useStore.getState().dateRangeVersion || 0) + 1
+            });
           }
-          useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+          if (useStore.persist?.rehydrate) {
+            useStore.persist.rehydrate().then(() => {
+              useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+            });
+          }
         }
       };
     }
@@ -45,17 +53,19 @@ export function useSpreadsheetSync() {
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith('yt-studio-analytics')) {
         if (useStore.persist?.rehydrate) {
-          useStore.persist.rehydrate();
+          useStore.persist.rehydrate().then(() => {
+            useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+          });
         }
-        useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
       }
     };
 
     const handleFocus = () => {
       if (useStore.persist?.rehydrate) {
-        useStore.persist.rehydrate();
+        useStore.persist.rehydrate().then(() => {
+          useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
+        });
       }
-      useStore.setState((s) => ({ dateRangeVersion: (s.dateRangeVersion || 0) + 1 }));
     };
 
     window.addEventListener('storage', handleStorage);

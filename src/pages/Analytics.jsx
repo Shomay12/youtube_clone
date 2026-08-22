@@ -57,6 +57,7 @@ const Analytics = () => {
     dateRangeVersion,
     selectedDateRange,
     setDateRange,
+    graphSettings,
     getAnalyticsForRange,
     realtimeDataset,
     tickRealtime
@@ -109,7 +110,7 @@ const Analytics = () => {
   }, [tickRealtime]);
 
   // Compute analytics dynamically based on selected date range & video from Excel data
-  // videos, channelInfo, and dateRangeVersion are deps so CRM updates instantly re-compute all charts & metric cards
+  // videos, channelInfo, graphSettings and dateRangeVersion are deps so CRM updates instantly re-compute all charts & metric cards
   const computedData = useMemo(() => {
     return getAnalyticsForRange(selectedDateRange, isVideoMode ? currentVideo.id : null);
   }, [
@@ -122,7 +123,8 @@ const Analytics = () => {
     dateRangeVersion,
     getAnalyticsForRange,
     videos,
-    channelInfo
+    channelInfo,
+    graphSettings
   ]);
 
   const { daily, aggregated, trafficSources, audience, dateRangeLabel } = computedData;
@@ -236,16 +238,24 @@ const Analytics = () => {
   const videoUploadPoints = useMemo(() => {
     if (isVideoMode || !dailyWithTypical || dailyWithTypical.length === 0) return [];
     const dateSet = new Set(dailyWithTypical.map(d => d.date));
-    const points = [];
+    const map = new Map();
     (videos || []).forEach(v => {
       const pubDate = v.publishDate || v.date;
       if (pubDate && dateSet.has(pubDate)) {
-        points.push({
-          date: pubDate,
-          title: v.title,
-          id: v.id
-        });
+        if (!map.has(pubDate)) {
+          map.set(pubDate, []);
+        }
+        map.get(pubDate).push(v);
       }
+    });
+    const points = [];
+    map.forEach((vids, pubDate) => {
+      points.push({
+        date: pubDate,
+        count: vids.length,
+        title: vids.map(v => v.title).join(', '),
+        id: vids[0].id
+      });
     });
     return points;
   }, [isVideoMode, dailyWithTypical, videos]);
@@ -700,8 +710,8 @@ const Analytics = () => {
                     <AreaChart data={dailyWithTypical} margin={{ top: 16, right: 35, left: 10, bottom: 20 }}>
                       <defs>
                         <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor="#2ba6de" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#2ba6de" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.07)" vertical={false} />
@@ -729,12 +739,11 @@ const Analytics = () => {
                         tickFormatter={(v) => selectedMetric === 'revenue' ? `₹${formatYAxisValue(v)}` : formatYAxisValue(v)}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
                       <Area
-                        type="monotone"
+                        type="linear"
                         dataKey={selectedMetric}
-                        stroke="#00e5ff"
-                        strokeWidth={1.75}
+                        stroke="#2ba6de"
+                        strokeWidth={1.85}
                         fill="url(#colorBlue)"
                         isAnimationActive={false}
                       />
@@ -760,7 +769,21 @@ const Analytics = () => {
                                   stroke="#333333"
                                   strokeWidth="1"
                                 />
-                                <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                                {v.count > 1 ? (
+                                  <text
+                                    x="9"
+                                    y="10.5"
+                                    fill="#ffffff"
+                                    fontSize="10"
+                                    fontWeight="600"
+                                    textAnchor="middle"
+                                    fontFamily="Roboto, Inter, sans-serif"
+                                  >
+                                    {v.count}
+                                  </text>
+                                ) : (
+                                  <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                                )}
                               </g>
                             );
                           }}
@@ -1098,10 +1121,10 @@ const Analytics = () => {
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey={selectedMetric === 'impressions' ? 'typicalUpper' : 'views'}
                     stroke="#818cf8"
-                    strokeWidth={1.75}
+                    strokeWidth={1.85}
                     fill="rgba(129, 140, 248, 0.15)"
                     isAnimationActive={false}
                   />
@@ -1118,7 +1141,11 @@ const Analytics = () => {
                           <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
                             <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
-                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            {v.count > 1 ? (
+                              <text x="9" y="10.5" fill="#ffffff" fontSize="10" fontWeight="600" textAnchor="middle" fontFamily="Roboto, Inter, sans-serif">{v.count}</text>
+                            ) : (
+                              <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            )}
                           </g>
                         );
                       }}
@@ -1301,10 +1328,10 @@ const Analytics = () => {
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey="watchTimeHrs"
                     stroke="#ec4899"
-                    strokeWidth={1.75}
+                    strokeWidth={1.85}
                     fill="rgba(236, 72, 153, 0.15)"
                     isAnimationActive={false}
                   />
@@ -1321,7 +1348,11 @@ const Analytics = () => {
                           <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
                             <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
-                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            {v.count > 1 ? (
+                              <text x="9" y="10.5" fill="#ffffff" fontSize="10" fontWeight="600" textAnchor="middle" fontFamily="Roboto, Inter, sans-serif">{v.count}</text>
+                            ) : (
+                              <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            )}
                           </g>
                         );
                       }}
@@ -1681,12 +1712,11 @@ const Analytics = () => {
                     tickFormatter={formatYAxisValue}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="typicalUpper" stroke="none" fill="rgba(255, 255, 255, 0.05)" isAnimationActive={false} />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey="views"
                     stroke="#a855f7"
-                    strokeWidth={1.75}
+                    strokeWidth={1.85}
                     fill="url(#colorPurple)"
                     isAnimationActive={false}
                   />
@@ -1703,7 +1733,11 @@ const Analytics = () => {
                           <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
                             <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
-                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            {v.count > 1 ? (
+                              <text x="9" y="10.5" fill="#ffffff" fontSize="10" fontWeight="600" textAnchor="middle" fontFamily="Roboto, Inter, sans-serif">{v.count}</text>
+                            ) : (
+                              <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            )}
                           </g>
                         );
                       }}
@@ -2076,12 +2110,11 @@ const Analytics = () => {
                     tickFormatter={v => `₹${formatYAxisValue(v)}`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="revenueTypicalUpper" stroke="none" fill="rgba(0, 0, 0, 0.04)" isAnimationActive={false} />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey="revenue"
                     stroke="#00c49f"
-                    strokeWidth={1.75}
+                    strokeWidth={1.85}
                     fill="url(#colorTeal)"
                     isAnimationActive={false}
                   />
@@ -2098,7 +2131,11 @@ const Analytics = () => {
                           <g transform={`translate(${props.cx - 9}, ${props.cy - 10})`} style={{ cursor: 'pointer' }}>
                             <title>{`${v.title} (${v.date})`}</title>
                             <rect x="0" y="0" width="18" height="14" rx="2" fill="#303030" stroke="#555555" strokeWidth="1" />
-                            <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            {v.count > 1 ? (
+                              <text x="9" y="10.5" fill="#ffffff" fontSize="10" fontWeight="600" textAnchor="middle" fontFamily="Roboto, Inter, sans-serif">{v.count}</text>
+                            ) : (
+                              <polygon points="7,4 12,7 7,10" fill="#ffffff" />
+                            )}
                           </g>
                         );
                       }}
@@ -2283,10 +2320,10 @@ const Analytics = () => {
                 />
                 <Tooltip />
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="views"
                   stroke="#ff9800"
-                  strokeWidth={1.75}
+                  strokeWidth={1.85}
                   fill="rgba(255, 152, 0, 0.12)"
                   isAnimationActive={false}
                 />

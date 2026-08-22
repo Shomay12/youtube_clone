@@ -302,14 +302,56 @@ export function formatDateRangeText(startDateInput, endDateInput) {
 }
 
 /**
+ * Deterministic PRNG based on Mulberry32 for consistent day-to-day distribution
+ */
+export function getDeterministicRandom(str, salt = 0) {
+  let h = 0x811c9dc5 ^ salt;
+  const s = String(str);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  let t = h ^ (h >>> 15);
+  t = Math.imul(t, 0x85ebca6b);
+  t ^= t >>> 13;
+  t = Math.imul(t, 0xc2b2ae35);
+  t ^= t >>> 16;
+  return (t >>> 0) / 4294967296;
+}
+
+/**
+ * Interpolate curve through user-sculpted node control points with hardness scaling
+ */
+export function interpolateCurve(nodes, progress, hardness = 1.0) {
+  if (!nodes || nodes.length === 0) return 1.0;
+  if (nodes.length === 1) return Number(nodes[0]) || 1.0;
+  const n = nodes.length - 1;
+  const pos = Math.max(0, Math.min(n, progress * n));
+  const idx = Math.min(n - 1, Math.floor(pos));
+  const frac = pos - idx;
+  const t = (1 - Math.cos(frac * Math.PI)) / 2;
+  const raw = Number(nodes[idx]) * (1 - t) + Number(nodes[idx + 1]) * t;
+  const h = Number(hardness) || 1.0;
+  return Math.pow(Math.max(0.02, raw), h);
+}
+
+/**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16', videosList = null) {
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-16', videosList = null, graphConfig = {}) {
   const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-16';
   const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const dailyData = [];
 
   const videoList = (videosList && videosList.length > 0) ? videosList : PROCESSED_VIDEOS;
+  const cfg = graphConfig?.channel || graphConfig || {};
+  const spikiness = cfg.spikiness !== undefined ? Number(cfg.spikiness) : (cfg.channelSpikiness !== undefined ? Number(cfg.channelSpikiness) : 1.0);
+  const algoFreq = cfg.algoFrequency !== undefined ? Number(cfg.algoFrequency) : (cfg.algorithmFrequency !== undefined ? Number(cfg.algorithmFrequency) : 1.0);
+  const uploadSurge = cfg.uploadSurge !== undefined ? Number(cfg.uploadSurge) : 1.0;
+  const hardness = cfg.hardness !== undefined ? Number(cfg.hardness) : 1.4;
+  const userNodes = (cfg.nodes && Array.isArray(cfg.nodes) && cfg.nodes.length >= 2)
+    ? cfg.nodes
+    : [1.0, 3.5, 0.9, 4.8, 1.1, 3.6, 1.2];
 
   // Build a map of upload dates and their relative weights
   const uploadDates = new Map();
@@ -332,8 +374,9 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-1
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const weekendMultiplier = isWeekend ? 1.06 : 1.0;
 
-    // Organic baseline micro-variation (gentle ±3% fluctuation, not repetitive ripples)
-    const microVariation = 1.0 + 0.03 * Math.sin(i * 0.43 + 1.2) - 0.02 * Math.cos(i * 0.77 + 0.4);
+    // Progress along time series: 0.0 at oldest date, 1.0 at today
+    const progress = 1.0 - (i / (daysCount - 1 || 1));
+    const userCurveVal = interpolateCurve(userNodes, progress, hardness);
 
     // Calculate upload spikes and realistic exponential decay trailing off
     let uploadMultiplier = 0.0;
@@ -342,47 +385,49 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-1
       const cTime = d.getTime();
       const diffDays = Math.round((cTime - uTime) / (1000 * 60 * 60 * 24));
       if (diffDays === 0) {
-        uploadMultiplier += 3.6 * weight; // Rise on upload day
+        uploadMultiplier += 3.6 * weight * uploadSurge;
       } else if (diffDays === 1) {
-        uploadMultiplier += 5.1 * weight; // Peak on next day
+        uploadMultiplier += 5.1 * weight * uploadSurge;
       } else if (diffDays === 2) {
-        uploadMultiplier += 2.6 * weight; // 2 days after
+        uploadMultiplier += 2.6 * weight * uploadSurge;
       } else if (diffDays === 3) {
-        uploadMultiplier += 1.7 * weight; // 3 days after
+        uploadMultiplier += 1.7 * weight * uploadSurge;
       } else if (diffDays === 4) {
-        uploadMultiplier += 1.2 * weight; // 4 days after
+        uploadMultiplier += 1.2 * weight * uploadSurge;
       } else if (diffDays === 5) {
-        uploadMultiplier += 0.9 * weight; // 5 days after
+        uploadMultiplier += 0.9 * weight * uploadSurge;
       } else if (diffDays === 6) {
-        uploadMultiplier += 0.7 * weight; // 6 days after
+        uploadMultiplier += 0.7 * weight * uploadSurge;
       } else if (diffDays === 7) {
-        uploadMultiplier += 0.5 * weight; // 7 days after
+        uploadMultiplier += 0.5 * weight * uploadSurge;
       } else if (diffDays > 7 && diffDays <= 14) {
-        uploadMultiplier += 0.35 * weight * Math.exp(-(diffDays - 7) * 0.4);
+        uploadMultiplier += 0.35 * weight * Math.exp(-(diffDays - 7) * 0.4) * uploadSurge;
       }
     });
 
-    // Natural sudden random spikes & jitter per date
-    let seed = 0;
-    for (let c = 0; c < dateStr.length; c++) {
-      seed = (seed * 31 + dateStr.charCodeAt(c)) & 0xffffffff;
-    }
-    const pseudoRand1 = ((seed & 0xffff) / 65535);
-    const pseudoRand2 = (((seed >> 16) & 0xffff) / 65535);
+    // Natural sudden random spikes & jitter per date using uniform deterministic hash
+    const pseudoRand1 = getDeterministicRandom(dateStr, 101);
+    const pseudoRand2 = getDeterministicRandom(dateStr, 202);
+    const pseudoRand3 = getDeterministicRandom(dateStr, 303);
 
     // Sudden dramatic random spikes (viral search & algorithm pushes)
     let spikeBoost = 0.0;
-    if (pseudoRand1 > 0.84) {
-      spikeBoost = 2.8 + pseudoRand2 * 2.4; // Major sudden spike (3.8x - 5.2x)
-    } else if (pseudoRand1 > 0.66) {
-      spikeBoost = 1.3 + pseudoRand2 * 1.5; // Moderate sudden spike (2.3x - 2.8x)
-    } else if (pseudoRand1 > 0.45) {
-      spikeBoost = 0.35 + pseudoRand2 * 0.45; // Subtle organic lift
+    const t1 = Math.max(0.60, 0.84 - (algoFreq - 1.0) * 0.08);
+    const t2 = Math.max(0.40, 0.64 - (algoFreq - 1.0) * 0.08);
+    const t3 = Math.max(0.20, 0.38 - (algoFreq - 1.0) * 0.08);
+
+    if (pseudoRand1 > t1) {
+      spikeBoost = (2.6 + pseudoRand2 * 2.4) * algoFreq; // Major sudden spike
+    } else if (pseudoRand1 > t2) {
+      spikeBoost = (1.2 + pseudoRand2 * 1.4) * algoFreq; // Moderate sudden spike
+    } else if (pseudoRand1 > t3) {
+      spikeBoost = (0.35 + pseudoRand2 * 0.45) * algoFreq; // Subtle organic lift
     }
 
-    const dailyJitter = 0.88 + pseudoRand2 * 0.24;
+    const jitterSpread = Math.min(1.4, 0.70 * spikiness);
+    const dailyJitter = Math.max(0.25, (1.0 - jitterSpread / 2) + pseudoRand3 * jitterSpread);
 
-    const baseDailyViews = Math.round(18000 * (1.0 + uploadMultiplier + spikeBoost) * weekendMultiplier * dailyJitter);
+    const baseDailyViews = Math.round(18000 * userCurveVal * (1.0 + uploadMultiplier + spikeBoost) * weekendMultiplier * dailyJitter);
     const ctr = parseFloat((7.8 + 0.3 * Math.sin(i * 1.3 + 0.7)).toFixed(1));
     const impressions = Math.round(baseDailyViews / (ctr / 100));
 
