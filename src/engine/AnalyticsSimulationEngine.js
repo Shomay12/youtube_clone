@@ -11,9 +11,9 @@
  */
 
 export const CHANNEL_BENCHMARKS = {
-  name: 'Kids Toon',
+  name: 'Soul Signs',
   handle: '@kidstoon',
-  subscribers: 412850,
+  subscribers: 109356,
   lifetimeViews: 21450000,
   averageRpm: 33.64,
   averageCpm: 58.00,
@@ -24,42 +24,42 @@ export const CHANNEL_BENCHMARKS = {
 };
 
 export const VIDEO_ID_TO_DATE = {
-  'VID001': '2026-08-11',
-  'VID002': '2026-08-07',
-  'VID003': '2026-07-21',
-  'VID004': '2026-07-12',
-  'VID005': '2026-06-02',
-  'VID006': '2026-04-28',
-  'VID007': '2026-04-10',
-  'VID008': '2026-03-22',
-  'VID009': '2026-03-15',
-  'VID010': '2026-02-18'
+  'VID001': '2026-07-21',
+  'VID002': '2026-07-16',
+  'VID003': '2026-07-11',
+  'VID004': '2026-07-06',
+  'VID005': '2026-07-01',
+  'VID006': '2026-06-26',
+  'VID007': '2026-06-21',
+  'VID008': '2026-06-16',
+  'VID009': '2026-06-11',
+  'VID010': '2026-06-06'
 };
 
 export const TITLE_TO_SCHEDULE_DATE = {
-  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-08-11',
-  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-08-07',
   'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-07-21',
-  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-07-12',
-  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-06-02',
-  'Make AI Videos Using Notebook LM': '2026-04-28',
-  'Raj Shamani Business Idea': '2026-04-10',
-  'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-03-22',
-  'This AI Saved Me 20 Hours': '2026-03-15',
-  'My Biggest AI Project Yet': '2026-02-18'
+  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-07-16',
+  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-07-11',
+  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-07-06',
+  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-07-01',
+  'Make AI Videos Using Notebook LM': '2026-06-26',
+  'Raj Shamani Business Idea': '2026-06-21',
+  'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-06-16',
+  'This AI Saved Me 20 Hours': '2026-06-11',
+  'My Biggest AI Project Yet': '2026-06-06'
 };
 
 export const VIDEO_PUBLISH_SCHEDULE = [
-  '2026-08-11',
-  '2026-08-07',
   '2026-07-21',
-  '2026-07-12',
-  '2026-06-02',
-  '2026-04-28',
-  '2026-04-10',
-  '2026-03-22',
-  '2026-03-15',
-  '2026-02-18'
+  '2026-07-16',
+  '2026-07-11',
+  '2026-07-06',
+  '2026-07-01',
+  '2026-06-26',
+  '2026-06-21',
+  '2026-06-16',
+  '2026-06-11',
+  '2026-06-06'
 ];
 
 export const RAW_VIDEOS = [
@@ -67,25 +67,30 @@ export const RAW_VIDEOS = [
     id: 'VID001',
     title: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
     description: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
-    duration: '15:20',
-    durationSecs: 920,
-    avgViewDuration: '11:27',
-    avgViewDurationSecs: 687,
-    views: 274365,
+    duration: '25:00',
+    durationSecs: 1500,
+    avgViewDuration: '12:32',
+    avgViewDurationSecs: 752,
+    views: 282957,
     ctr: 8.9,
-    rpm: 435.066426,
-    cpm: 791.03,
+    rpm: 425.4215,
+    cpm: 58.65,
     publishDate: '2026-07-21',
     thumbnail: '/thumbnails/latest_video.png',
     category: 'Entertainment',
-    watchTimeHrs: 52346,
-    revenue: 119367,
-    revenueFormatted: '₹1,19,367.00',
-    watchTimeHrsFormatted: '52.3K hrs',
-    subscribersGained: 4946,
+    watchTimeHrs: 59100,
+    revenue: 120376,
+    revenueFormatted: '₹1,20,376.00',
+    watchTimeHrsFormatted: '59.1K hrs',
+    subscribersGained: 5023,
     subscribersLost: 0,
-    netSubscribers: 4946,
-    viewsFormatted: '274.4K'
+    netSubscribers: 5023,
+    subscribersNet: 5023,
+    viewsFormatted: '283.0K',
+    subscribersNetFormatted: '+5.0K',
+    subscribersGainedFormatted: '+5.0K',
+    realtimeViews48h: 1378,
+    realtimeViews60m: 80
   },
   {
     id: 'VID002',
@@ -99,7 +104,7 @@ export const RAW_VIDEOS = [
     ctr: 7.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-08-11',
+    publishDate: '2026-07-16',
     thumbnail: '/thumbnails/2.webp',
     category: 'Entertainment'
   },
@@ -115,7 +120,7 @@ export const RAW_VIDEOS = [
     ctr: 6.4,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-08-07',
+    publishDate: '2026-07-11',
     thumbnail: '/thumbnails/3.webp',
     category: 'Entertainment'
   },
@@ -131,7 +136,7 @@ export const RAW_VIDEOS = [
     ctr: 6.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-07-12',
+    publishDate: '2026-07-06',
     thumbnail: '/thumbnails/4.webp',
     category: 'Education'
   },
@@ -147,7 +152,7 @@ export const RAW_VIDEOS = [
     ctr: 7.8,
     rpm: 33.70,
     cpm: 57.96,
-    publishDate: '2026-07-31',
+    publishDate: '2026-07-01',
     thumbnail: '/thumbnails/5.webp',
     category: 'Education'
   },
@@ -163,7 +168,7 @@ export const RAW_VIDEOS = [
     ctr: 4.9,
     rpm: 34.50,
     cpm: 59.34,
-    publishDate: '2026-07-27',
+    publishDate: '2026-06-26',
     thumbnail: '/thumbnails/4.webp',
     category: 'Science & Technology'
   },
@@ -179,7 +184,7 @@ export const RAW_VIDEOS = [
     ctr: 9.3,
     rpm: 33.20,
     cpm: 57.10,
-    publishDate: '2026-07-23',
+    publishDate: '2026-06-21',
     thumbnail: '/thumbnails/5.webp',
     category: 'Business'
   },
@@ -195,7 +200,7 @@ export const RAW_VIDEOS = [
     ctr: 7.1,
     rpm: 33.40,
     cpm: 57.45,
-    publishDate: '2026-07-19',
+    publishDate: '2026-06-16',
     thumbnail: '/thumbnails/7.webp',
     category: 'Entertainment'
   },
@@ -211,7 +216,7 @@ export const RAW_VIDEOS = [
     ctr: 8.4,
     rpm: 34.00,
     cpm: 58.48,
-    publishDate: '2026-07-15',
+    publishDate: '2026-06-11',
     thumbnail: '/thumbnails/2.webp',
     category: 'Science & Technology'
   },
@@ -227,7 +232,7 @@ export const RAW_VIDEOS = [
     ctr: 6.8,
     rpm: 33.60,
     cpm: 57.79,
-    publishDate: '2026-07-11',
+    publishDate: '2026-06-06',
     thumbnail: '/thumbnails/3.webp',
     category: 'Science & Technology'
   }

@@ -131,33 +131,33 @@ CREATE TRIGGER trg_crm_state_updated_at
 -- Initial Seed Data: Channel
 -- ----------------------------------------------------------------------------
 INSERT INTO crm_channel (
-    channel_id, name, handle, avatar, banner, country,
-    subscribers, subscribers_formatted, subscribers_gained_last_28_days, subscribers_gained_last_28_days_formatted,
-    views_last_28_days, views_last_28_days_formatted, watch_time_last_28_days, watch_time_last_28_days_formatted,
-    revenue_last_28_days, revenue_last_28_days_formatted, total_views, total_revenue, total_revenue_formatted,
-    currency, has_explicit_channel_metrics
+    channel_id, name, handle, avatar, banner, country, subscribers, subscribers_formatted,
+    subscribers_gained_last_28_days, subscribers_gained_last_28_days_formatted,
+    views_last_28_days, views_last_28_days_formatted, watch_time_last_28_days,
+    watch_time_last_28_days_formatted, revenue_last_28_days, revenue_last_28_days_formatted,
+    total_views, total_revenue, total_revenue_formatted, currency, has_explicit_channel_metrics
 ) VALUES (
     'UCqpdVWIzEQUcbf4pAxlneOQ',
-    'Kids Toon',
+    'Soul Signs',
     '@kidstoon',
     '/channel-avatar.png',
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
     'United States',
-    412850,
-    '412.9K',
-    214,
-    '+214',
-    1250000,
-    '1.3M',
-    1383.80,
-    '1.4K hrs',
-    42050.00,
-    '₹42,050.00',
+    109356,
+    '1,09,356',
+    29400,
+    '+29.4K',
+    2400000,
+    '2.4M',
+    38200.00,
+    '38.2K hrs',
+    2024584.38,
+    '₹20,24,584.38',
     21450000,
-    721577.00,
-    '₹7,21,577.00',
+    2024584.38,
+    '₹20,24,584.38',
     'INR',
-    false
+    true
 )
 ON CONFLICT (channel_id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -181,10 +181,10 @@ INSERT INTO crm_videos (
     'VID001', 'UCqpdVWIzEQUcbf4pAxlneOQ',
     'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
     'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
-    '/thumbnails/latest_video.png', '15:20', 920,
-    '11:27', 687, 274365, '274.4K', 12620, 932,
-    435.07, 791.03, 8.90, 119367.00, '₹1,19,367.00', 4946, 0, 4946,
-    52346.00, 3082752, 'Public', true, 'None', 'Entertainment', '2026-07-17', 1
+    '/thumbnails/latest_video.png', '25:00', 1500,
+    '12:32', 752, 282957, '283.0K', 32453, 354,
+    425.42, 58.65, 8.90, 120376.00, '₹1,20,376.00', 5023, 0, 5023,
+    59100.00, 17337079, 'Public', true, 'None', 'Entertainment', '2026-07-21', 1
 ),
 (
     'VID002', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -193,7 +193,7 @@ INSERT INTO crm_videos (
     '/thumbnails/2.webp', '14:22', 862,
     '3:45', 225, 892000, '892K', 41032, 3033,
     33.80, 58.14, 7.20, 30149.60, '₹30,149.60', 12488, 1499, 10989,
-    55.75, 12388889, 'Public', true, 'None', 'Entertainment', '2026-02-28', 2
+    55750.00, 12388889, 'Public', true, 'None', 'Entertainment', '2026-07-16', 2
 ),
 (
     'VID003', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -202,7 +202,7 @@ INSERT INTO crm_videos (
     '/thumbnails/3.webp', '12:14', 734,
     '2:57', 177, 650000, '650K', 29900, 2210,
     33.80, 58.14, 6.40, 21970.00, '₹21,970.00', 9100, 1092, 8008,
-    31.96, 10156250, 'Public', true, 'None', 'Entertainment', '2026-03-02', 3
+    31958.30, 10156250, 'Public', true, 'None', 'Entertainment', '2026-07-11', 3
 ),
 (
     'VID004', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -211,7 +211,7 @@ INSERT INTO crm_videos (
     '/thumbnails/4.webp', '10:18', 618,
     '3:12', 192, 529000, '529K', 24334, 1799,
     33.80, 58.14, 6.20, 17880.20, '₹17,880.20', 7406, 889, 6517,
-    28.21, 8532258, 'Public', true, 'None', 'Education', '2026-03-15', 4
+    28213.30, 8532258, 'Public', true, 'None', 'Education', '2026-07-06', 4
 ),
 (
     'VID005', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -220,7 +220,7 @@ INSERT INTO crm_videos (
     '/thumbnails/5.webp', '10:18', 618,
     '1:51', 111, 410000, '410K', 18860, 1394,
     33.70, 57.96, 7.80, 13817.00, '₹13,817.00', 5740, 689, 5051,
-    12.64, 5256410, 'Public', true, 'None', 'Education', '2026-03-22', 5
+    12641.70, 5256410, 'Public', true, 'None', 'Education', '2026-07-01', 5
 ),
 (
     'VID006', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -229,7 +229,7 @@ INSERT INTO crm_videos (
     '/thumbnails/6.webp', '12:14', 734,
     '0:31', 31, 438000, '438K', 20148, 1489,
     34.50, 59.34, 4.90, 15111.00, '₹15,111.00', 6132, 736, 5396,
-    3.77, 8938776, 'Public', true, 'None', 'Science & Technology', '2026-04-10', 6
+    3771.70, 8938776, 'Public', true, 'None', 'Science & Technology', '2026-06-26', 6
 ),
 (
     'VID007', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -238,7 +238,7 @@ INSERT INTO crm_videos (
     '/thumbnails/7.webp', '08:42', 522,
     '0:46', 46, 2110000, '2.1M', 97060, 7174,
     33.20, 57.10, 9.30, 70052.00, '₹70,052.00', 29540, 3545, 25995,
-    26.96, 22688172, 'Public', true, 'None', 'Business', '2026-04-28', 7
+    26961.10, 22688172, 'Public', true, 'None', 'Business', '2026-06-21', 7
 ),
 (
     'VID008', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -247,16 +247,16 @@ INSERT INTO crm_videos (
     '/thumbnails/1.webp', '07:56', 476,
     '2:03', 123, 973000, '973K', 44758, 3308,
     33.40, 57.45, 7.10, 32498.20, '₹32,498.20', 13622, 1635, 11987,
-    33.24, 13704225, 'Public', true, 'None', 'Entertainment', '2026-06-02', 8
+    33244.20, 13704225, 'Public', true, 'None', 'Entertainment', '2026-06-16', 8
 ),
 (
     'VID009', 'UCqpdVWIzEQUcbf4pAxlneOQ',
-    'Open Source AI vs ChatGPT',
-    'Detailed benchmark comparison between Llama 3, Mistral, and ChatGPT.',
-    '/thumbnails/2.webp', '11:05', 665,
-    '4:15', 255, 356000, '356K', 16376, 1210,
-    34.80, 59.86, 5.10, 12388.80, '₹12,388.80', 4984, 598, 4386,
-    25.22, 6980392, 'Public', true, 'None', 'Science & Technology', '2026-06-20', 9
+    'This AI Saved Me 20 Hours',
+    'Automation tools saving developer and creator time.',
+    '/thumbnails/2.webp', '09:31', 571,
+    '3:45', 225, 1678000, '1.7M', 77188, 5705,
+    34.00, 58.48, 8.40, 57052.00, '₹57,052.00', 23492, 0, 23492,
+    104875.00, 19976190, 'Public', true, 'None', 'Science & Technology', '2026-06-11', 9
 ),
 (
     'VID010', 'UCqpdVWIzEQUcbf4pAxlneOQ',
@@ -264,8 +264,8 @@ INSERT INTO crm_videos (
     'Unveiling autonomous AI agent architecture built over 3 months.',
     '/thumbnails/3.webp', '07:56', 476,
     '3:20', 200, 812000, '812K', 37352, 2761,
-    33.60, 57.79, 6.80, 27283.20, '₹27,283.20', 11368, 1364, 10004,
-    45.11, 11941176, 'Public', true, 'None', 'Science & Technology', '2026-07-22', 10
+    33.60, 57.79, 6.80, 27283.20, '₹27,283.20', 11368, 0, 11368,
+    45111.10, 11941176, 'Public', true, 'None', 'Science & Technology', '2026-06-06', 10
 )
 ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,

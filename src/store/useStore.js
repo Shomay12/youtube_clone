@@ -125,19 +125,23 @@ const BASELINE_REVENUE = PROCESSED_VIDEOS.reduce((acc, v) => acc + ((Number(v.vi
 const EMPTY_STATE = {
   channelInfo: {
     ...CHANNEL_BENCHMARKS,
-    subscribersFormatted: '412.9K',
+    subscribers: 109356,
+    subscribersFormatted: '1,09,356',
     lifetimeViewsFormatted: '21.5M',
     totalUploads: PROCESSED_VIDEOS.length,
     hasExplicitChannelMetrics: true,
-    viewsLast28Days: 136326,
-    viewsLast28DaysFormatted: '1.4L',
-    watchTimeLast28Days: 5720.5,
-    watchTimeLast28DaysFormatted: '5.7K hrs',
-    subscribersGainedLast28Days: 81,
-    subscribersGainedLast28DaysFormatted: '+81',
-    revenueLast28Days: 12860.65,
-    revenueLast28DaysFormatted: '12860.65',
-    totalRevenueFormatted: '₹7,21,577.00',
+    viewsLast28Days: 2400000,
+    viewsLast28DaysFormatted: '2.4M',
+    watchTimeLast28Days: 38200,
+    watchTimeLast28DaysFormatted: '38.2K hrs',
+    subscribersGainedLast28Days: 29400,
+    subscribersGainedLast28DaysFormatted: '+29.4K',
+    revenueLast28Days: 2024584.38,
+    revenueLast28DaysFormatted: '₹20,24,584.38',
+    totalRevenueFormatted: '₹20,24,584.38',
+    realtimeSubscribers: 109356,
+    realtimeViews48h: 23474,
+    realtimeViews60m: 1378,
     currency: 'INR'
   },
   videos: PROCESSED_VIDEOS,
@@ -1228,7 +1232,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v13',
+      name: 'yt-studio-analytics-v14',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1248,7 +1252,7 @@ export const useStore = create(
           }
           if (state.videos && Array.isArray(state.videos)) {
             const normalized = state.videos.map((v, idx) => {
-              const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-08-16';
+              const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21';
               const pubDate = v.publishDate || v.date || scheduledDate;
               const subsGained = Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
               const netSubs = Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
