@@ -48,7 +48,7 @@ const PRESET_THUMBNAILS = [
 ];
 
 export function computeDatesForPreset(presetKey, anchorDate) {
-  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-28';
   const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const formatDate = (d) => d.toISOString().split('T')[0];
   const subDays = (d, count) => {
@@ -371,9 +371,9 @@ export default function CRM() {
 
   // Date Range Draft State
   const [dateDraft, setDateDraft] = useState({
-    anchorDate: simulationAnchorDate || '2026-08-21',
-    startDate: customStartDate || '2026-07-25',
-    endDate: customEndDate || '2026-08-21',
+    anchorDate: simulationAnchorDate || '2026-08-28',
+    startDate: customStartDate || '2026-08-01',
+    endDate: customEndDate || '2026-08-28',
     preset: selectedDateRange || 'last28'
   });
 
@@ -435,9 +435,9 @@ export default function CRM() {
 
   useEffect(() => {
     setDateDraft({
-      anchorDate: simulationAnchorDate || '2026-08-21',
-      startDate: customStartDate || '2026-07-25',
-      endDate: customEndDate || '2026-08-21',
+      anchorDate: simulationAnchorDate || '2026-08-28',
+      startDate: customStartDate || '2026-08-01',
+      endDate: customEndDate || '2026-08-28',
       preset: selectedDateRange || 'last28'
     });
   }, [simulationAnchorDate, customStartDate, customEndDate, selectedDateRange]);
@@ -1801,7 +1801,7 @@ export default function CRM() {
                 <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
                   <span className="crm-field-label" style={{ marginBottom: 0 }}>Quick anchor presets:</span>
                   {[
-                    { label: 'Aug 21, 2026 (Default)', date: '2026-08-21' },
+                    { label: 'Aug 28, 2026 (Default)', date: '2026-08-28' },
                     { label: 'Aug 14, 2026', date: '2026-08-14' },
                     { label: 'Aug 4, 2026', date: '2026-08-04' },
                     { label: 'Jul 31, 2026', date: '2026-07-31' },
@@ -1951,7 +1951,7 @@ export default function CRM() {
                 <div className="crm-quick-pill-row" style={{ marginTop: 8 }}>
                   <span className="crm-field-label" style={{ marginBottom: 0 }}>28-day templates:</span>
                   {[
-                    { label: 'Jul 25 – Aug 21, 2026 (Default)', start: '2026-07-25', end: '2026-08-21' },
+                    { label: 'Aug 1 – 28, 2026 (Default)', start: '2026-08-01', end: '2026-08-28' },
                     { label: 'Jul 18 – Aug 14, 2026', start: '2026-07-18', end: '2026-08-14' },
                     { label: 'Jul 7 – Aug 4, 2026', start: '2026-07-07', end: '2026-08-04' },
                     { label: 'Jun 18 – Jul 15, 2026', start: '2026-06-18', end: '2026-07-15' },
@@ -2003,14 +2003,14 @@ export default function CRM() {
                 className="crm-btn crm-btn-cancel"
                 onClick={() => {
                   setDateDraft({
-                    anchorDate: '2026-08-21',
-                    startDate: '2026-07-25',
-                    endDate: '2026-08-21',
+                    anchorDate: '2026-08-28',
+                    startDate: '2026-08-01',
+                    endDate: '2026-08-28',
                     preset: 'last28'
                   });
                 }}
               >
-                🔄 Reset to Jul 25 – Aug 21, 2026
+                🔄 Reset to Aug 1 – 28, 2026
               </button>
             </div>
           </div>

@@ -338,8 +338,8 @@ export function interpolateCurve(nodes, progress, hardness = 1.0) {
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-21', videosList = null, graphConfig = {}) {
-  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-28', videosList = null, graphConfig = {}) {
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-28';
   const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const dailyData = [];
 
@@ -470,7 +470,7 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-2
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-21');
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-28');
 
 /**
  * Filter daily metrics based on date range boundaries
@@ -636,7 +636,7 @@ export function getAudienceBreakdown(totalViews) {
 /**
  * Realtime continuous data generator (Last 60 minutes & Last 48 hours)
  */
-export function generateRealtimeDataset(anchorDate = '2026-08-21') {
+export function generateRealtimeDataset(anchorDate = '2026-08-28') {
   const last60Minutes = [];
   const now = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T12:00:00Z`);
 

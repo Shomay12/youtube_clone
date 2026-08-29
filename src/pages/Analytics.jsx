@@ -100,6 +100,7 @@ const Analytics = () => {
   const [revenueMakeMoneyFilter, setRevenueMakeMoneyFilter] = useState('All');
   const [revenueContentFilter, setRevenueContentFilter] = useState('Videos');
   const [deviceTypeFilter, setDeviceTypeFilter] = useState('All');
+  const [isNoticeDismissed, setIsNoticeDismissed] = useState(false);
 
   // Continuous Realtime Ticker Interval
   useEffect(() => {
@@ -636,22 +637,42 @@ const Analytics = () => {
       {/* OVERVIEW TAB */}
       {activeTab === 'Overview' && (
         <div className="overview-tab-content">
-          <div className="analytics-headline-box">
-            <h2 className="analytics-headline-title">
-              {isVideoMode
-                ? 'Views are up 51%! More people than usual are watching this video from YouTube search results.'
-                : 'Keep it up! Your channel got about the same number of views as usual.'}
-            </h2>
-            <p className="analytics-headline-sub">
-              {isVideoMode
-                ? `This video has gotten ${aggregated.viewsFormatted || fmtV(currentVideo.views) || '0'} views since it was published`
-                : `Your channel got ${aggregated.viewsFormatted} views in this selected period`}
-            </p>
-          </div>
-
           <div className="analytics-main-grid">
             {/* Left Column: Hero Chart & Top Content */}
             <div className="overview-left-column">
+              {/* Views Count Update Info Banner */}
+              {!isNoticeDismissed && (
+                <div className="analytics-notice-banner">
+                  <div className="analytics-notice-content">
+                    <span className="material-symbols-outlined notice-icon">info</span>
+                    <span className="analytics-notice-text">
+                      We updated how views are counted, so recent counts may be higher. Keep this in mind when analyzing your performance.
+                    </span>
+                  </div>
+                  <div className="analytics-notice-actions">
+                    <button className="notice-btn notice-learn-more" onClick={() => window.open('https://support.google.com/youtube/answer/2991101', '_blank')}>
+                      Learn more
+                    </button>
+                    <button className="notice-btn notice-dismiss" onClick={() => setIsNoticeDismissed(true)}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="analytics-headline-box">
+                <h2 className="analytics-headline-title">
+                  {isVideoMode
+                    ? 'Views are up 51%! More people than usual are watching this video from YouTube search results.'
+                    : 'Keep it up! Your channel got about the same number of views as usual.'}
+                </h2>
+                <p className="analytics-headline-sub">
+                  {isVideoMode
+                    ? `This video has gotten ${aggregated.viewsFormatted || fmtV(currentVideo.views) || '0'} views since it was published`
+                    : `Your channel got ${aggregated.viewsFormatted} views in this selected period`}
+                </p>
+              </div>
+
               <div className="analytics-card hero-chart-card">
                 {/* 4 Metric selector tabs */}
                 <div className="metrics-selector-row">
@@ -1757,7 +1778,7 @@ const Analytics = () => {
             {/* Left Column */}
             <div className="audience-col">
               {/* Audience by watch behavior */}
-              <StudioCard title="Audience by watch behavior" subtitle={`Monthly audience · ${formatSingleDate(simulationAnchorDate || '2026-08-21')}`} infoIcon={true}>
+              <StudioCard title="Audience by watch behavior" subtitle={`Monthly audience · ${formatSingleDate(simulationAnchorDate || '2026-08-28')}`} infoIcon={true}>
                 <div className="format-segmented-bar margin-bottom-16">
                   <div className="segment seg-purple" style={{ width: '81%' }} />
                   <div className="segment seg-lavender" style={{ width: '16%' }} />

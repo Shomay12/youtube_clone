@@ -149,6 +149,61 @@
   border-bottom-color: #0f0f0f;
 }
 
+/* Analytics Notice Banner */
+.analytics-notice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f2f2f2;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.analytics-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.analytics-notice-content .notice-icon {
+  font-size: 20px;
+  color: #0f0f0f;
+  flex-shrink: 0;
+}
+
+.analytics-notice-text {
+  font-size: 13px;
+  color: #0f0f0f;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.analytics-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.notice-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f0f0f;
+  padding: 6px 12px;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.notice-btn:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
 /* Card Base */
 .studio-analytics-card {
   background-color: #ffffff;

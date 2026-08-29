@@ -113,9 +113,9 @@ export function distributeWithRealtimeEnd(weights, totalViews, targetEndViews, i
   return result;
 }
 
-const INITIAL_ANCHOR_DATE = '2026-08-21';
+const INITIAL_ANCHOR_DATE = '2026-08-28';
 const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
-const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-07-25', '2026-08-21');
+const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-08-01', '2026-08-28');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
 
 // Baseline lifetime totals from the original simulation data
@@ -272,10 +272,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-08-21',
+      simulationAnchorDate: '2026-08-28',
       selectedDateRange: 'last28',
-      customStartDate: '2026-07-25',
-      customEndDate: '2026-08-21',
+      customStartDate: '2026-08-01',
+      customEndDate: '2026-08-28',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -370,10 +370,10 @@ export const useStore = create(
         get().persistToDatabase();
       },
 
-      // Set simulation anchor date (e.g. '2026-08-21') and update date ranges
+      // Set simulation anchor date (e.g. '2026-08-28') and update date ranges
       setSimulationAnchorDate: (anchorDate, customStart = null, customEnd = null) => {
         set(state => {
-          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-21';
+          const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-28';
           let startStr = customStart;
           if (!startStr) {
             const d = new Date(`${cleanAnchor}T00:00:00Z`);
@@ -442,7 +442,7 @@ export const useStore = create(
       getAnalyticsForRange: (rangeKey = null, videoId = null) => {
         const state = get();
         const activeKey = rangeKey || state.selectedDateRange;
-        const anchorDateStr = state.simulationAnchorDate || '2026-08-21';
+        const anchorDateStr = state.simulationAnchorDate || '2026-08-28';
         const today = new Date(anchorDateStr.includes('T') ? anchorDateStr : `${anchorDateStr}T00:00:00Z`);
 
         const formatDate = (d) => d.toISOString().split('T')[0];
@@ -453,7 +453,7 @@ export const useStore = create(
         };
 
         const todayStr = formatDate(today);
-        let startStr = '2026-07-25';
+        let startStr = '2026-08-01';
         let endStr = todayStr;
 
         if (activeKey === 'today') {
@@ -1228,10 +1228,15 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v12',
+      name: 'yt-studio-analytics-v13',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          if (state.simulationAnchorDate === '2026-08-21' || !state.simulationAnchorDate) {
+            state.simulationAnchorDate = '2026-08-28';
+            state.customStartDate = '2026-08-01';
+            state.customEndDate = '2026-08-28';
+          }
           if (state.channelInfo) {
             if (state.channelInfo.revenueLast28DaysFormatted) {
               state.channelInfo.revenueLast28DaysFormatted = formatINR(state.channelInfo.revenueLast28DaysFormatted);
