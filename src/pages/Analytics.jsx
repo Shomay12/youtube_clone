@@ -1778,7 +1778,7 @@ const Analytics = () => {
             {/* Left Column */}
             <div className="audience-col">
               {/* Audience by watch behavior */}
-              <StudioCard title="Audience by watch behavior" subtitle={`Monthly audience · ${formatSingleDate(simulationAnchorDate || '2026-08-28')}`} infoIcon={true}>
+              <StudioCard title="Audience by watch behavior" subtitle={`Monthly audience · ${formatSingleDate(simulationAnchorDate || '2026-09-01')}`} infoIcon={true}>
                 <div className="format-segmented-bar margin-bottom-16">
                   <div className="segment seg-purple" style={{ width: '81%' }} />
                   <div className="segment seg-lavender" style={{ width: '16%' }} />

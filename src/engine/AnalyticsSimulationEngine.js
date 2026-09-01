@@ -13,7 +13,7 @@
 export const CHANNEL_BENCHMARKS = {
   name: 'Soul Signs',
   handle: '@kidstoon',
-  subscribers: 109356,
+  subscribers: 109785,
   lifetimeViews: 21450000,
   averageRpm: 33.64,
   averageCpm: 58.00,
@@ -69,28 +69,28 @@ export const RAW_VIDEOS = [
     description: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
     duration: '25:00',
     durationSecs: 1500,
-    avgViewDuration: '12:32',
-    avgViewDurationSecs: 752,
-    views: 282957,
+    avgViewDuration: '12:33',
+    avgViewDurationSecs: 753,
+    views: 283456,
     ctr: 8.9,
-    rpm: 425.4215,
+    rpm: 428.3275,
     cpm: 58.65,
     publishDate: '2026-07-21',
     thumbnail: '/thumbnails/latest_video.png',
     category: 'Entertainment',
-    watchTimeHrs: 59100,
-    revenue: 120376,
-    revenueFormatted: '₹1,20,376.00',
-    watchTimeHrsFormatted: '59.1K hrs',
-    subscribersGained: 5023,
+    watchTimeHrs: 59300,
+    revenue: 121412,
+    revenueFormatted: '₹1,21,412.00',
+    watchTimeHrsFormatted: '59.3K hrs',
+    subscribersGained: 5026,
     subscribersLost: 0,
-    netSubscribers: 5023,
-    subscribersNet: 5023,
-    viewsFormatted: '283.0K',
+    netSubscribers: 5026,
+    subscribersNet: 5026,
+    viewsFormatted: '283.5K',
     subscribersNetFormatted: '+5.0K',
     subscribersGainedFormatted: '+5.0K',
-    realtimeViews48h: 1378,
-    realtimeViews60m: 80
+    realtimeViews48h: 879,
+    realtimeViews60m: 52
   },
   {
     id: 'VID002',
@@ -343,8 +343,8 @@ export function interpolateCurve(nodes, progress, hardness = 1.0) {
 /**
  * Generate 365 daily time series data points leading up to today.
  */
-export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-28', videosList = null, graphConfig = {}) {
-  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-08-28';
+export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-09-01', videosList = null, graphConfig = {}) {
+  const cleanAnchor = anchorDate ? anchorDate.split('T')[0] : '2026-09-01';
   const today = new Date(`${cleanAnchor}T00:00:00Z`);
   const dailyData = [];
 
@@ -475,7 +475,7 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-08-2
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-08-28');
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-09-01');
 
 /**
  * Filter daily metrics based on date range boundaries
@@ -641,7 +641,7 @@ export function getAudienceBreakdown(totalViews) {
 /**
  * Realtime continuous data generator (Last 60 minutes & Last 48 hours)
  */
-export function generateRealtimeDataset(anchorDate = '2026-08-28') {
+export function generateRealtimeDataset(anchorDate = '2026-09-01') {
   const last60Minutes = [];
   const now = new Date(anchorDate.includes('T') ? anchorDate : `${anchorDate}T12:00:00Z`);
 

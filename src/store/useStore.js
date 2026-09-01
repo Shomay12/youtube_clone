@@ -113,9 +113,9 @@ export function distributeWithRealtimeEnd(weights, totalViews, targetEndViews, i
   return result;
 }
 
-const INITIAL_ANCHOR_DATE = '2026-08-28';
+const INITIAL_ANCHOR_DATE = '2026-09-01';
 const INITIAL_REALTIME = generateRealtimeDataset(INITIAL_ANCHOR_DATE);
-const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-08-01', '2026-08-28');
+const INITIAL_LAST28_DAILY = filterDailyMetricsByRange(DAILY_SERIES, '2026-08-05', '2026-09-01');
 const INITIAL_AGG = aggregateMetrics(INITIAL_LAST28_DAILY);
 
 // Baseline lifetime totals from the original simulation data
@@ -125,23 +125,23 @@ const BASELINE_REVENUE = PROCESSED_VIDEOS.reduce((acc, v) => acc + ((Number(v.vi
 const EMPTY_STATE = {
   channelInfo: {
     ...CHANNEL_BENCHMARKS,
-    subscribers: 109356,
-    subscribersFormatted: '1,09,356',
+    subscribers: 109785,
+    subscribersFormatted: '1,09,785',
     lifetimeViewsFormatted: '21.5M',
     totalUploads: PROCESSED_VIDEOS.length,
     hasExplicitChannelMetrics: true,
-    viewsLast28Days: 2400000,
-    viewsLast28DaysFormatted: '2.4M',
-    watchTimeLast28Days: 38200,
-    watchTimeLast28DaysFormatted: '38.2K hrs',
-    subscribersGainedLast28Days: 29400,
-    subscribersGainedLast28DaysFormatted: '+29.4K',
-    revenueLast28Days: 2024584.38,
-    revenueLast28DaysFormatted: '₹20,24,584.38',
-    totalRevenueFormatted: '₹20,24,584.38',
-    realtimeSubscribers: 109356,
-    realtimeViews48h: 23474,
-    realtimeViews60m: 1378,
+    viewsLast28Days: 2300000,
+    viewsLast28DaysFormatted: '2.3M',
+    watchTimeLast28Days: 37400,
+    watchTimeLast28DaysFormatted: '37.4K hrs',
+    subscribersGainedLast28Days: 29100,
+    subscribersGainedLast28DaysFormatted: '+29.1K',
+    revenueLast28Days: 1989456.75,
+    revenueLast28DaysFormatted: '₹19,89,456.75',
+    totalRevenueFormatted: '₹19,89,456.75',
+    realtimeSubscribers: 109785,
+    realtimeViews48h: 21452,
+    realtimeViews60m: 1250,
     currency: 'INR'
   },
   videos: PROCESSED_VIDEOS,
@@ -276,10 +276,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-08-28',
+      simulationAnchorDate: '2026-09-01',
       selectedDateRange: 'last28',
-      customStartDate: '2026-08-01',
-      customEndDate: '2026-08-28',
+      customStartDate: '2026-08-05',
+      customEndDate: '2026-09-01',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -1232,14 +1232,14 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v14',
+      name: 'yt-studio-analytics-v15',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          if (state.simulationAnchorDate === '2026-08-21' || !state.simulationAnchorDate) {
-            state.simulationAnchorDate = '2026-08-28';
-            state.customStartDate = '2026-08-01';
-            state.customEndDate = '2026-08-28';
+          if (state.simulationAnchorDate === '2026-08-21' || state.simulationAnchorDate === '2026-08-28' || !state.simulationAnchorDate) {
+            state.simulationAnchorDate = '2026-09-01';
+            state.customStartDate = '2026-08-05';
+            state.customEndDate = '2026-09-01';
           }
           if (state.channelInfo) {
             if (state.channelInfo.revenueLast28DaysFormatted) {
