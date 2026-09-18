@@ -133,9 +133,9 @@ const EMPTY_STATE = {
     viewsLast28Days: 2400000,
     viewsLast28DaysFormatted: '2.4M',
     watchTimeLast28Days: 42110,
-    watchTimeLast28DaysFormatted: '42.1K hrs',
-    subscribersGainedLast28Days: 31990,
-    subscribersGainedLast28DaysFormatted: '+32.0K',
+    watchTimeLast28DaysFormatted: '42.11K hrs',
+    subscribersGainedLast28Days: 31900,
+    subscribersGainedLast28DaysFormatted: '+31.9K',
     revenueLast28Days: 2130458.84,
     revenueLast28DaysFormatted: '₹21,30,458.84',
     totalRevenueFormatted: '₹21,30,458.84',
@@ -1232,7 +1232,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v19',
+      name: 'yt-studio-analytics-v20',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
