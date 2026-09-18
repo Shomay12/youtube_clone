@@ -1232,15 +1232,13 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v18',
+      name: 'yt-studio-analytics-v19',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          if (state.simulationAnchorDate === '2026-08-21' || state.simulationAnchorDate === '2026-08-28' || state.simulationAnchorDate === '2026-09-01' || state.simulationAnchorDate === '2026-09-04' || state.simulationAnchorDate === '2026-09-11' || !state.simulationAnchorDate) {
-            state.simulationAnchorDate = '2026-09-18';
-            state.customStartDate = '2026-08-22';
-            state.customEndDate = '2026-09-18';
-          }
+          state.simulationAnchorDate = '2026-09-18';
+          state.customStartDate = '2026-08-22';
+          state.customEndDate = '2026-09-18';
           if (state.channelInfo) {
             if (state.channelInfo.revenueLast28DaysFormatted) {
               state.channelInfo.revenueLast28DaysFormatted = formatINR(state.channelInfo.revenueLast28DaysFormatted);

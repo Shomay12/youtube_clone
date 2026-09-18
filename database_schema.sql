@@ -182,9 +182,9 @@ INSERT INTO crm_videos (
     'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
     'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
     '/thumbnails/latest_video.png', '25:00', 1500,
-    '12:51', 771, 289164, '289.2K', 32453, 354,
-    427.38, 58.65, 8.90, 123584.00, '₹1,23,584.00', 5146, 0, 5146,
-    61900.00, 17337079, 'Public', true, 'None', 'Entertainment', '2026-07-21', 1
+    '12:51', 771, 258739, '258.7K', 32453, 354,
+    427.38, 58.65, 8.90, 110581.00, '₹1,10,581.00', 4605, 0, 4605,
+    55390.00, 17337079, 'Public', true, 'None', 'Entertainment', '2026-07-21', 1
 ),
 (
     'VID002', 'UCqpdVWIzEQUcbf4pAxlneOQ',
