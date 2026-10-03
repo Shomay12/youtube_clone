@@ -125,23 +125,23 @@ const BASELINE_REVENUE = PROCESSED_VIDEOS.reduce((acc, v) => acc + ((Number(v.vi
 const EMPTY_STATE = {
   channelInfo: {
     ...CHANNEL_BENCHMARKS,
-    subscribers: 124895,
-    subscribersFormatted: '1,24,895',
+    subscribers: 128547,
+    subscribersFormatted: '1,28,547',
     lifetimeViewsFormatted: '21.5M',
     totalUploads: PROCESSED_VIDEOS.length,
     hasExplicitChannelMetrics: true,
-    viewsLast28Days: 2730000,
-    viewsLast28DaysFormatted: '2.73M',
-    watchTimeLast28Days: 47400,
-    watchTimeLast28DaysFormatted: '47.4K hrs',
-    subscribersGainedLast28Days: 33890,
-    subscribersGainedLast28DaysFormatted: '+33.89K',
-    revenueLast28Days: 2142749.63,
-    revenueLast28DaysFormatted: '₹21,42,749.63',
-    totalRevenueFormatted: '₹21,42,749.63',
-    realtimeSubscribers: 124895,
-    realtimeViews48h: 31753,
-    realtimeViews60m: 1850,
+    viewsLast28Days: 2840000,
+    viewsLast28DaysFormatted: '2.84M',
+    watchTimeLast28Days: 51410,
+    watchTimeLast28DaysFormatted: '51.41K hrs',
+    subscribersGainedLast28Days: 36130,
+    subscribersGainedLast28DaysFormatted: '+36.13K',
+    revenueLast28Days: 2107542.46,
+    revenueLast28DaysFormatted: '₹21,07,542.46',
+    totalRevenueFormatted: '₹21,07,542.46',
+    realtimeSubscribers: 128547,
+    realtimeViews48h: 36473,
+    realtimeViews60m: 2130,
     currency: 'INR'
   },
   videos: PROCESSED_VIDEOS,
@@ -276,10 +276,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-09-28',
+      simulationAnchorDate: '2026-10-02',
       selectedDateRange: 'last28',
-      customStartDate: '2026-09-01',
-      customEndDate: '2026-09-28',
+      customStartDate: '2026-09-05',
+      customEndDate: '2026-10-02',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -1232,13 +1232,13 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v23',
+      name: 'yt-studio-analytics-v24',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.simulationAnchorDate = '2026-09-28';
-          state.customStartDate = '2026-09-01';
-          state.customEndDate = '2026-09-28';
+          state.simulationAnchorDate = '2026-10-02';
+          state.customStartDate = '2026-09-05';
+          state.customEndDate = '2026-10-02';
           if (state.channelInfo) {
             if (state.channelInfo.revenueLast28DaysFormatted) {
               state.channelInfo.revenueLast28DaysFormatted = formatINR(state.channelInfo.revenueLast28DaysFormatted);
