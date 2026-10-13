@@ -68,7 +68,15 @@ const Sidebar = ({ isCollapsed, onOpenSettings }) => {
             </button>
             <div className="video-sidebar-card">
               <div className="video-thumb-wrapper">
-                <img src={currentVideo.thumbnail} alt="Video thumb" className="video-card-thumb" />
+                <img 
+                  src={currentVideo.thumbnail || '/thumbnails/latest_video.png'} 
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/thumbnails/latest_video.png';
+                  }} 
+                  alt="Video thumb" 
+                  className="video-card-thumb" 
+                />
                 <span className="video-card-duration">{currentVideo.duration}</span>
               </div>
               <span className="video-card-tag">Your video</span>
