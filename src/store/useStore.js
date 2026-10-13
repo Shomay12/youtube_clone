@@ -1239,7 +1239,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v27',
+      name: 'yt-studio-analytics-v28',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
