@@ -928,7 +928,12 @@ const Analytics = () => {
                           return (
                             <div className="top-content-row" key={vid.id || idx}>
                               <span className="row-number">{idx + 1}</span>
-                              <img src={vid.thumbnail} alt="" className="row-thumb" />
+                              <img 
+                                src={vid.thumbnail || '/thumbnails/1.webp'} 
+                                onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                                alt="" 
+                                className="row-thumb" 
+                              />
                               <div className="row-info">
                                 <div className="row-title" title={vid.title}>{vid.title}</div>
                                 <div className="row-meta-line">
@@ -1018,7 +1023,11 @@ const Analytics = () => {
                     </div>
                     {videos.slice(0, 3).map(v => (
                       <div className="rail-content-row" key={v.id}>
-                        <img src={v.thumbnail} alt="" />
+                        <img 
+                          src={v.thumbnail || '/thumbnails/1.webp'} 
+                          onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                          alt="" 
+                        />
                         <span className="rail-title">{v.title}</span>
                         <span className="rail-val">{(Number(v.views || 0) * 0.0055 >= 1000 ? Math.round(Number(v.views || 0) * 0.0055).toLocaleString('en-IN') : Math.round(Number(v.views || 0) * 0.0055))}</span>
                       </div>

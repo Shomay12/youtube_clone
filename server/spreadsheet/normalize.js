@@ -87,7 +87,10 @@ function parseVideosSheet(rows, currency) {
     const revenueOverride = row['Revenue Override'] ?? row['Estimated Revenue Override'] ?? '';
     const revenue = calcVideoRevenue(views, rpm, revenueOverride);
     const thumbNum = (index % 7) + 1;
-    const thumbnail = row['Thumbnail URL'] || row['Thumbnail'] || (index === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`);
+    let thumbnail = row['Thumbnail URL'] || row['Thumbnail'] || (index === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`);
+    if (!thumbnail || thumbnail.includes('picsum.photos') || thumbnail.includes('example.com')) {
+      thumbnail = index === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
+    }
 
     return {
       id: String(row['Video ID'] || row['ID'] || ''),

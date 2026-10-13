@@ -124,7 +124,11 @@ const Dashboard = () => {
             {latestVideo ? (
               <>
                 <div className="video-thumbnail" onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${latestVideo.id}`)}>
-                  <img src={latestVideo.thumbnail} alt="Video thumbnail" />
+                  <img 
+                    src={latestVideo.thumbnail || '/thumbnails/latest_video.png'} 
+                    onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                    alt="Video thumbnail" 
+                  />
                   <div className="video-duration">{latestVideo.duration}</div>
                 </div>
                 <div className="video-stats-summary">

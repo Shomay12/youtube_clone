@@ -148,6 +148,23 @@ export const InsforgeService = {
         });
       }
 
+      // If Insforge cloud was unreachable or empty, fallback to server local CRM cache
+      if (!channelInfo && !videos) {
+        try {
+          const localRes = await fetch('/api/crm/data').then(r => r.json());
+          if (localRes?.success && localRes.data) {
+            return {
+              success: true,
+              channelInfo: localRes.data.channelInfo || null,
+              videos: localRes.data.videos || null,
+              stateData: localRes.data.stateData || null
+            };
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       return {
         success: true,
         channelInfo,
@@ -155,7 +172,20 @@ export const InsforgeService = {
         stateData
       };
     } catch (err) {
-      console.error('[Insforge] Failed to load data from database:', err);
+      console.warn('[Insforge] Failed to load data from cloud DB, checking local CRM cache:', err.message);
+      try {
+        const localRes = await fetch('/api/crm/data').then(r => r.json());
+        if (localRes?.success && localRes.data) {
+          return {
+            success: true,
+            channelInfo: localRes.data.channelInfo || null,
+            videos: localRes.data.videos || null,
+            stateData: localRes.data.stateData || null
+          };
+        }
+      } catch {
+        // ignore
+      }
       return { success: false, error: err.message };
     }
   },

@@ -123,6 +123,7 @@ const BASELINE_VIEWS = PROCESSED_VIDEOS.reduce((acc, v) => acc + (Number(v.views
 const BASELINE_REVENUE = PROCESSED_VIDEOS.reduce((acc, v) => acc + ((Number(v.views) || 0) / 1000 * (Number(v.rpm) || 33.64)), 0) || 722000;
 
 const EMPTY_STATE = {
+  hasCrmOverrides: true,
   channelInfo: {
     ...CHANNEL_BENCHMARKS,
     subscribers: 134721,
@@ -229,8 +230,14 @@ function applySpreadsheetData(data) {
   const rawList = data.videos && data.videos.length > 0 ? data.videos : EMPTY_STATE.videos;
   const normalizedVideos = rawList.map((v, i) => {
     const pubDate = v.publishDate || v.date;
+    const thumbNum = (i % 7) + 1;
+    const fallbackThumb = i === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
+    const thumbnail = (!v.thumbnail || v.thumbnail.includes('picsum.photos') || v.thumbnail.includes('example.com'))
+      ? fallbackThumb
+      : v.thumbnail;
     return {
       ...v,
+      thumbnail,
       publishDate: pubDate,
       date: pubDate,
       sortOrder: v.sortOrder !== undefined ? v.sortOrder : i + 1
@@ -1232,10 +1239,11 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v26',
+      name: 'yt-studio-analytics-v27',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          state.hasCrmOverrides = true;
           state.simulationAnchorDate = '2026-10-12';
           state.customStartDate = '2026-09-15';
           state.customEndDate = '2026-10-12';
@@ -1249,13 +1257,22 @@ export const useStore = create(
             state.channelInfo.currency = 'INR';
           }
           if (state.videos && Array.isArray(state.videos)) {
-            const normalized = state.videos.map((v, idx) => {
+            // If videos were contaminated by template dummy titles, restore default processed videos
+            const hasDummyVideos = state.videos.some(v => v.title && (v.title.includes('Alphabet Song') || v.title.includes('Baby Shark')));
+            const sourceList = (hasDummyVideos || state.videos.length < 10) ? PROCESSED_VIDEOS : state.videos;
+            const normalized = sourceList.map((v, idx) => {
               const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21';
               const pubDate = v.publishDate || v.date || scheduledDate;
               const subsGained = Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
               const netSubs = Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
+              const thumbNum = (idx % 7) + 1;
+              const fallbackThumb = idx === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
+              const thumbnail = (!v.thumbnail || v.thumbnail.includes('picsum.photos') || v.thumbnail.includes('example.com'))
+                ? fallbackThumb
+                : v.thumbnail;
               return {
                 ...v,
+                thumbnail,
                 publishDate: pubDate,
                 date: pubDate,
                 sortOrder: v.sortOrder !== undefined ? v.sortOrder : idx + 1,

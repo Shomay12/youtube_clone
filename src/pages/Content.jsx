@@ -322,7 +322,12 @@ const Content = () => {
                       <td className="video-col">
                         <div className="video-cell">
                           <div className="video-thumb-container" onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`)}>
-                            <img src={item.thumbnail} alt={item.title} className="video-thumb-small" />
+                            <img 
+                              src={item.thumbnail || '/thumbnails/1.webp'} 
+                              onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                              alt={item.title} 
+                              className="video-thumb-small" 
+                            />
                             {item.duration && <span className="video-duration-small">{item.duration}</span>}
                           </div>
                           <div className="video-info">

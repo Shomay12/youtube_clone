@@ -18,12 +18,25 @@ export function registerSpreadsheetRoutes(app) {
   // Permanent CRM Storage endpoints backed by Insforge PostgreSQL
   app.get('/api/crm/data', async (req, res) => {
     try {
-      // 1. Fetch from Insforge DB
-      const [{ data: channelData }, { data: videosData }, { data: stateSnapshot }] = await Promise.all([
-        insforgeServer.database.from('crm_channel').select('*').limit(1).catch(() => ({ data: null })),
-        insforgeServer.database.from('crm_videos').select('*').order('sort_order', { ascending: true }).catch(() => ({ data: null })),
-        insforgeServer.database.from('crm_state').select('state_data').eq('key', 'current_state').single().catch(() => ({ data: null }))
-      ]);
+      // 1. Fetch from Insforge DB with 2-second timeout
+      let channelData = null;
+      let videosData = null;
+      let stateSnapshot = null;
+
+      try {
+        const fetchDb = Promise.all([
+          insforgeServer.database.from('crm_channel').select('*').limit(1),
+          insforgeServer.database.from('crm_videos').select('*').order('sort_order', { ascending: true }),
+          insforgeServer.database.from('crm_state').select('state_data').eq('key', 'current_state').single()
+        ]);
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
+        const [cRes, vRes, sRes] = await Promise.race([fetchDb, timeout]);
+        channelData = cRes?.data || null;
+        videosData = vRes?.data || null;
+        stateSnapshot = sRes?.data || null;
+      } catch {
+        // Insforge DB offline or timed out, proceed to fallback
+      }
 
       if (channelData || videosData || stateSnapshot) {
         return res.json({

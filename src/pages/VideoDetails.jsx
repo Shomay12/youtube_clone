@@ -210,7 +210,11 @@ const VideoDetails = () => {
           {/* Right Column: Preview & Info */}
           <div className="video-preview-column">
             <div className="video-player-mock">
-              <img src={formData.thumbnail} alt="Thumbnail" />
+              <img 
+                src={formData.thumbnail || '/thumbnails/latest_video.png'} 
+                onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                alt="Thumbnail" 
+              />
               <div className="play-button-mock">
                 <span className="material-symbols-outlined">play_arrow</span>
               </div>
