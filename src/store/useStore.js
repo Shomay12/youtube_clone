@@ -1239,32 +1239,48 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v28',
+      name: 'yt-studio-analytics-v29',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasCrmOverrides = true;
+          state.selectedDateRange = 'last28';
           state.simulationAnchorDate = '2026-10-12';
           state.customStartDate = '2026-09-15';
           state.customEndDate = '2026-10-12';
           if (state.channelInfo) {
-            if (state.channelInfo.revenueLast28DaysFormatted) {
-              state.channelInfo.revenueLast28DaysFormatted = formatINR(state.channelInfo.revenueLast28DaysFormatted);
-            }
-            if (state.channelInfo.totalRevenueFormatted) {
-              state.channelInfo.totalRevenueFormatted = formatINR(state.channelInfo.totalRevenueFormatted);
-            }
+            state.channelInfo.viewsLast28Days = 2520000;
+            state.channelInfo.viewsLast28DaysFormatted = '2.52M';
+            state.channelInfo.watchTimeLast28Days = 47380;
+            state.channelInfo.watchTimeLast28DaysFormatted = '47.38K hrs';
+            state.channelInfo.subscribersGainedLast28Days = 38270;
+            state.channelInfo.subscribersGainedLast28DaysFormatted = '+38.27K';
+            state.channelInfo.revenueLast28Days = 2118647.13;
+            state.channelInfo.revenueLast28DaysFormatted = '₹21,18,647.13';
+            state.channelInfo.totalRevenue = 2118647.13;
+            state.channelInfo.totalRevenueFormatted = '₹21,18,647.13';
+            state.channelInfo.subscribers = 134721;
+            state.channelInfo.subscribersFormatted = '1,34,721';
+            state.channelInfo.realtimeSubscribers = 134721;
+            state.channelInfo.realtimeViews48h = 35146;
             state.channelInfo.currency = 'INR';
+            state.channelInfo.hasExplicitChannelMetrics = true;
           }
           if (state.videos && Array.isArray(state.videos)) {
             // If videos were contaminated by template dummy titles, restore default processed videos
             const hasDummyVideos = state.videos.some(v => v.title && (v.title.includes('Alphabet Song') || v.title.includes('Baby Shark')));
             const sourceList = (hasDummyVideos || state.videos.length < 10) ? PROCESSED_VIDEOS : state.videos;
             const normalized = sourceList.map((v, idx) => {
+              const isVid1 = v.id === 'VID001' || idx === 0;
               const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21';
               const pubDate = v.publishDate || v.date || scheduledDate;
-              const subsGained = Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
-              const netSubs = Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
+              const views = isVid1 ? 240564 : (Number(v.views) || 0);
+              const watchTimeHrs = isVid1 ? 51490 : (Number(v.watchTimeHrs) || 0);
+              const subsGained = isVid1 ? 4281 : Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
+              const netSubs = isVid1 ? 4281 : Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
+              const revenue = isVid1 ? 102813.79 : (Number(v.revenue) || 0);
+              const realtimeViews48h = isVid1 ? 294 : (Number(v.realtimeViews48h) || 0);
+              const rpm = isVid1 ? 427.3865 : (Number(v.rpm) || 33.64);
               const thumbNum = (idx % 7) + 1;
               const fallbackThumb = idx === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
               const thumbnail = (!v.thumbnail || v.thumbnail.includes('picsum.photos') || v.thumbnail.includes('example.com'))
@@ -1272,15 +1288,23 @@ export const useStore = create(
                 : v.thumbnail;
               return {
                 ...v,
+                views,
+                watchTimeHrs,
+                subscribersGained: subsGained,
+                netSubscribers: netSubs,
+                subscribersNet: netSubs,
+                revenue,
+                realtimeViews48h,
+                rpm,
                 thumbnail,
                 publishDate: pubDate,
                 date: pubDate,
                 sortOrder: v.sortOrder !== undefined ? v.sortOrder : idx + 1,
-                revenueFormatted: formatINR(v.revenueFormatted || v.revenue),
-                subscribersNetFormatted: fmtS(netSubs),
-                subscribersGainedFormatted: fmtS(subsGained),
-                viewsFormatted: fmtV(v.views),
-                watchTimeHrsFormatted: fmtW(v.watchTimeHrs)
+                revenueFormatted: isVid1 ? '₹1,02,813.79' : formatINR(v.revenueFormatted || revenue),
+                subscribersNetFormatted: isVid1 ? '+4.3K' : fmtS(netSubs),
+                subscribersGainedFormatted: isVid1 ? '+4.3K' : fmtS(subsGained),
+                viewsFormatted: isVid1 ? '240.6K' : fmtV(views),
+                watchTimeHrsFormatted: isVid1 ? '51.49K hrs' : fmtW(watchTimeHrs)
               };
             });
             // Sort descending strictly

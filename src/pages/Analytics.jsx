@@ -83,11 +83,53 @@ const Analytics = () => {
     else if (path.includes('tab-overview')) setActiveTab('Overview');
   }, [location.pathname, isVideoMode]);
 
+  const periodSlugMap = useMemo(() => ({
+    'last28': 'period-last-28-days',
+    'last7': 'period-last-7-days',
+    'last90': 'period-last-90-days',
+    '365': 'period-last-365-days',
+    'lifetime': 'period-lifetime',
+    'since_published': 'period-since-published',
+    'first24': 'period-first-24-hours',
+    'today': 'period-today',
+    'yesterday': 'period-yesterday'
+  }), []);
+
+  const effectiveDateRange = useMemo(() => {
+    const path = location.pathname;
+    if (path.includes('period-last-28-days')) return 'last28';
+    if (path.includes('period-last-7-days')) return 'last7';
+    if (path.includes('period-last-90-days')) return 'last90';
+    if (path.includes('period-last-365-days')) return '365';
+    if (path.includes('period-lifetime')) return 'lifetime';
+    if (path.includes('period-since-published')) return 'since_published';
+    if (path.includes('period-first-24-hours')) return 'first24';
+    if (path.includes('period-today')) return 'today';
+    if (path.includes('period-yesterday')) return 'yesterday';
+    return selectedDateRange || 'last28';
+  }, [location.pathname, selectedDateRange]);
+
+  useEffect(() => {
+    if (effectiveDateRange && effectiveDateRange !== selectedDateRange) {
+      setDateRange(effectiveDateRange);
+    }
+  }, [effectiveDateRange, selectedDateRange, setDateRange]);
+
+  const handleDatePresetSelect = (presetKey) => {
+    setDateRange(presetKey);
+    setShowDatePicker(false);
+    const pSlug = periodSlugMap[presetKey] || `period-${presetKey}`;
+    const slug = `tab-${activeTab.toLowerCase()}`;
+    const search = location.search ? location.search : '';
+    navigate(`${CHANNEL_PREFIX}/analytics/${slug}/${pSlug}${search}`);
+  };
+
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     const slug = `tab-${tabName.toLowerCase()}`;
+    const pSlug = periodSlugMap[effectiveDateRange] || 'period-last-28-days';
     const search = location.search ? location.search : '';
-    navigate(`${CHANNEL_PREFIX}/analytics/${slug}/period-last-28-days${search}`);
+    navigate(`${CHANNEL_PREFIX}/analytics/${slug}/${pSlug}${search}`);
   };
   const [selectedMetric, setSelectedMetric] = useState('views');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -113,9 +155,9 @@ const Analytics = () => {
   // Compute analytics dynamically based on selected date range & video from Excel data
   // videos, channelInfo, graphSettings and dateRangeVersion are deps so CRM updates instantly re-compute all charts & metric cards
   const computedData = useMemo(() => {
-    return getAnalyticsForRange(selectedDateRange, isVideoMode ? currentVideo.id : null);
+    return getAnalyticsForRange(effectiveDateRange, isVideoMode ? currentVideo.id : null);
   }, [
-    selectedDateRange,
+    effectiveDateRange,
     isVideoMode,
     currentVideo.id,
     simulationAnchorDate,
@@ -132,7 +174,7 @@ const Analytics = () => {
 
   // Enhance daily data with typical range simulation & slight upward incline for 7 days / monthly date ranges
   const dailyWithTypical = useMemo(() => {
-    if (selectedDateRange === 'first24') {
+    if (effectiveDateRange === 'first24') {
       const points = [];
       const totalV = aggregated?.views || 10400;
       const totalW = aggregated?.watchTimeHrs || 335.2;
@@ -233,7 +275,7 @@ const Analytics = () => {
         revenueTypicalUpper: Math.round(avgRev * 1.25)
       };
     });
-  }, [daily, selectedMetric, selectedDateRange, isVideoMode, aggregated, videos, video, currentVideo]);
+  }, [daily, selectedMetric, effectiveDateRange, isVideoMode, aggregated, videos, video, currentVideo]);
 
   // Compute video upload marker points present within the rendered chart range
   const videoUploadPoints = useMemo(() => {
@@ -279,7 +321,7 @@ const Analytics = () => {
 
   // Compute exactly 7 evenly spaced tick dates from day start (index 0) to day end (index len - 1)
   const chartTicks = useMemo(() => {
-    if (selectedDateRange === 'first24') {
+    if (effectiveDateRange === 'first24') {
       return ['0', '4', '8', '12', '16', '20', '24 hours'];
     }
     if (!dailyWithTypical || dailyWithTypical.length === 0) return undefined;
@@ -295,7 +337,7 @@ const Analytics = () => {
       }
     }
     return ticks;
-  }, [dailyWithTypical, selectedDateRange]);
+  }, [dailyWithTypical, effectiveDateRange]);
 
   const formatXAxisDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== 'string') return dateStr;
@@ -479,21 +521,21 @@ const Analytics = () => {
   ], [DATE_PRESET_GROUPS]);
 
   const activePresetLabel = useMemo(() => {
-    if (isVideoMode && (selectedDateRange === 'since_published' || !selectedDateRange)) {
+    if (isVideoMode && (effectiveDateRange === 'since_published' || !effectiveDateRange)) {
       return 'Since published';
     }
-    const found = ALL_DATE_PRESETS.find(p => p.key === selectedDateRange);
+    const found = ALL_DATE_PRESETS.find(p => p.key === effectiveDateRange);
     return found ? found.label : (isVideoMode ? 'Since published' : 'Last 28 days');
-  }, [isVideoMode, selectedDateRange, ALL_DATE_PRESETS]);
+  }, [isVideoMode, effectiveDateRange, ALL_DATE_PRESETS]);
 
   const videoDateLabel = useMemo(() => {
     if (!isVideoMode) return dateRangeLabel;
-    if (selectedDateRange && selectedDateRange !== 'since_published') {
+    if (effectiveDateRange && effectiveDateRange !== 'since_published') {
       return dateRangeLabel;
     }
     const pDate = currentVideo?.publishDate || currentVideo?.date || '2026-08-16';
     return `${formatSingleDate(pDate)} – Now`;
-  }, [isVideoMode, selectedDateRange, dateRangeLabel, currentVideo]);
+  }, [isVideoMode, effectiveDateRange, dateRangeLabel, currentVideo]);
 
   // Dynamic Realtime Calculations
   const realtime48hViews = isVideoMode
@@ -597,15 +639,12 @@ const Analytics = () => {
                     <div className="dropdown-divider" />
                     <div className="dropdown-group-items">
                       {group.items.map(preset => {
-                        const isActive = selectedDateRange === preset.key;
+                        const isActive = effectiveDateRange === preset.key;
                         return (
                           <div
                             key={preset.key}
                             className={`date-option ${isActive ? 'active' : ''}`}
-                            onClick={() => {
-                              setDateRange(preset.key);
-                              setShowDatePicker(false);
-                            }}
+                            onClick={() => handleDatePresetSelect(preset.key)}
                           >
                             <span>{preset.label}</span>
                             {isActive && <span className="material-symbols-outlined check-ic">check</span>}
