@@ -90,7 +90,8 @@ export const RAW_VIDEOS = [
     subscribersNetFormatted: '+4.2K',
     subscribersGainedFormatted: '+4.2K',
     realtimeViews48h: 316,
-    realtimeViews60m: 18
+    realtimeViews60m: 18,
+    topContentViews: 1453
   },
   {
     id: 'VID002',
@@ -106,7 +107,8 @@ export const RAW_VIDEOS = [
     cpm: 58.14,
     publishDate: '2026-07-16',
     thumbnail: '/thumbnails/2.webp',
-    category: 'Entertainment'
+    category: 'Entertainment',
+    topContentViews: 1287
   },
   {
     id: 'VID003',
@@ -122,7 +124,8 @@ export const RAW_VIDEOS = [
     cpm: 58.14,
     publishDate: '2026-07-11',
     thumbnail: '/thumbnails/3.webp',
-    category: 'Entertainment'
+    category: 'Entertainment',
+    topContentViews: 1198
   },
   {
     id: 'VID004',

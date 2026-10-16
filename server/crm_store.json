@@ -77,7 +77,8 @@
         "external": 3.6
       },
       "subscribersNetFormatted": "+4.2K",
-      "subscribersGainedFormatted": "+4.2K"
+      "subscribersGainedFormatted": "+4.2K",
+      "topContentViews": 1453
     },
     {
       "id": "VID002",
@@ -109,7 +110,8 @@
       "avgViewDurationSecs": 225,
       "watchTimeHrsFormatted": "55.8K hrs",
       "subscribersNetFormatted": "+11.0K",
-      "subscribersGainedFormatted": "+12.5K"
+      "subscribersGainedFormatted": "+12.5K",
+      "topContentViews": 1287
     },
     {
       "id": "VID003",
@@ -138,6 +140,7 @@
       "subscribersLost": 1092,
       "revenueFormatted": "₹21,970.00",
       "subscribersGained": 9100,
+      "topContentViews": 1198,
       "avgViewDurationSecs": 177,
       "watchTimeHrsFormatted": "32.0K hrs",
       "subscribersNetFormatted": "+8.0K",

@@ -1239,7 +1239,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v30',
+      name: 'yt-studio-analytics-v31',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1280,6 +1280,7 @@ export const useStore = create(
               const netSubs = isVid1 ? 4157 : Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
               const revenue = isVid1 ? 104107.53 : (Number(v.revenue) || 0);
               const realtimeViews48h = isVid1 ? 316 : (Number(v.realtimeViews48h) || 0);
+              const topContentViews = isVid1 ? 1453 : (idx === 1 ? 1287 : (idx === 2 ? 1198 : (v.topContentViews || Math.round(views * 0.0055))));
               const rpm = isVid1 ? 427.3866 : (Number(v.rpm) || 33.64);
               const thumbNum = (idx % 7) + 1;
               const fallbackThumb = idx === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
@@ -1295,6 +1296,7 @@ export const useStore = create(
                 subscribersNet: netSubs,
                 revenue,
                 realtimeViews48h,
+                topContentViews,
                 rpm,
                 thumbnail,
                 publishDate: pubDate,

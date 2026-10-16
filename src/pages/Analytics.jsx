@@ -1060,17 +1060,22 @@ const Analytics = () => {
                       <span>Top content</span>
                       <span>Views</span>
                     </div>
-                    {videos.slice(0, 3).map(v => (
-                      <div className="rail-content-row" key={v.id}>
-                        <img 
-                          src={v.thumbnail || '/thumbnails/1.webp'} 
-                          onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
-                          alt="" 
-                        />
-                        <span className="rail-title">{v.title}</span>
-                        <span className="rail-val">{(Number(v.views || 0) * 0.0055 >= 1000 ? Math.round(Number(v.views || 0) * 0.0055).toLocaleString('en-IN') : Math.round(Number(v.views || 0) * 0.0055))}</span>
-                      </div>
-                    ))}
+                    {videos.slice(0, 3).map((v, idx) => {
+                      const topViews = v.topContentViews !== undefined
+                        ? Number(v.topContentViews)
+                        : (idx === 0 ? 1453 : (idx === 1 ? 1287 : (idx === 2 ? 1198 : Math.round(Number(v.views || 0) * 0.0055))));
+                      return (
+                        <div className="rail-content-row" key={v.id}>
+                          <img 
+                            src={v.thumbnail || '/thumbnails/1.webp'} 
+                            onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                            alt="" 
+                          />
+                          <span className="rail-title">{v.title}</span>
+                          <span className="rail-val">{topViews.toLocaleString('en-IN')}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
