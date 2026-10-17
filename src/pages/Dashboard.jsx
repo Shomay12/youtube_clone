@@ -241,7 +241,7 @@ const Dashboard = () => {
               {(videos || []).slice(0, 3).map(v => (
                 <div className="top-video-item" key={v.id} onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${v.id}`)}>
                   <span className="video-name">{v.title}</span>
-                  <span className="video-views">{v.viewsFormatted || fmtV(v.views)}</span>
+                  <span className="video-views">{v.topContentViews !== undefined ? Number(v.topContentViews).toLocaleString('en-IN') : (v.viewsFormatted || fmtV(v.views))}</span>
                 </div>
               ))}
             </div>

@@ -24,10 +24,10 @@ export const CHANNEL_BENCHMARKS = {
 };
 
 export const VIDEO_ID_TO_DATE = {
-  'VID001': '2026-07-21',
-  'VID002': '2026-07-16',
-  'VID003': '2026-07-11',
-  'VID004': '2026-07-06',
+  'VID001': '2026-08-07',
+  'VID002': '2026-08-03',
+  'VID003': '2026-07-28',
+  'VID004': '2026-07-21',
   'VID005': '2026-07-01',
   'VID006': '2026-06-26',
   'VID007': '2026-06-21',
@@ -37,10 +37,11 @@ export const VIDEO_ID_TO_DATE = {
 };
 
 export const TITLE_TO_SCHEDULE_DATE = {
-  '6 Signs your Soulmate Is About To Enter Your Life': '2026-07-21',
-  'Why You Can\'t Stop Thinking About One Particular Person': '2026-07-16',
-  'Your Soulmate Is Closer Than You Think -Here Are The Signs ': '2026-07-11',
-  'Your Soulmate Is Closer Than You Think -Here Are The Signs': '2026-07-11',
+  '6 Signs your Soulmate Is About To Enter Your Life': '2026-08-07',
+  'Why You Can\'t Stop Thinking About One Particular Person': '2026-08-03',
+  'Your Soulmate Is Closer Than You Think -Here Are The Signs ': '2026-07-28',
+  'Your Soulmate Is Closer Than You Think -Here Are The Signs': '2026-07-28',
+  'This Man Loves You So Much... But You\'re Not the Only Woman': '2026-07-21',
   'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-07-21',
   'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-07-16',
   'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-07-11',
@@ -54,10 +55,10 @@ export const TITLE_TO_SCHEDULE_DATE = {
 };
 
 export const VIDEO_PUBLISH_SCHEDULE = [
+  '2026-08-07',
+  '2026-08-03',
+  '2026-07-28',
   '2026-07-21',
-  '2026-07-16',
-  '2026-07-11',
-  '2026-07-06',
   '2026-07-01',
   '2026-06-26',
   '2026-06-21',
@@ -80,7 +81,7 @@ export const RAW_VIDEOS = [
     ctr: 8.9,
     rpm: 427.3866,
     cpm: 58.65,
-    publishDate: '2026-07-21',
+    publishDate: '2026-08-07',
     thumbnail: '/thumbnails/soulmate_enter_life.png',
     category: 'Entertainment',
     watchTimeHrs: 52140,
@@ -96,7 +97,7 @@ export const RAW_VIDEOS = [
     subscribersGainedFormatted: '+4.2K',
     realtimeViews48h: 316,
     realtimeViews60m: 18,
-    topContentViews: 1453
+    topContentViews: 316
   },
   {
     id: 'VID002',
@@ -111,10 +112,11 @@ export const RAW_VIDEOS = [
     ctr: 7.2,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-07-16',
+    publishDate: '2026-08-03',
     thumbnail: '/thumbnails/stop_thinking_person.png',
     category: 'Entertainment',
-    topContentViews: 1287
+    realtimeViews48h: 245,
+    topContentViews: 245
   },
   {
     id: 'VID003',
@@ -129,26 +131,42 @@ export const RAW_VIDEOS = [
     ctr: 6.4,
     rpm: 33.80,
     cpm: 58.14,
-    publishDate: '2026-07-11',
+    publishDate: '2026-07-28',
     thumbnail: '/thumbnails/soulmate_closer.png',
     category: 'Entertainment',
-    topContentViews: 1198
+    realtimeViews48h: 186,
+    topContentViews: 186
   },
   {
     id: 'VID004',
-    title: 'AI Blogging Course in 2026 using facebook, Instagram Youtube...',
-    description: 'Full course on AI blogging, social media traffic & monetization.',
-    duration: '10:18',
-    durationSecs: 618,
-    avgViewDuration: '3:12',
-    avgViewDurationSecs: 192,
-    views: 529000,
-    ctr: 6.2,
-    rpm: 33.80,
-    cpm: 58.14,
-    publishDate: '2026-07-06',
-    thumbnail: '/thumbnails/4.webp',
-    category: 'Education'
+    sortOrder: 4,
+    title: 'This Man Loves You So Much... But You\'re Not the Only Woman',
+    description: 'This Man Loves You So Much... But You\'re Not the Only Woman',
+    duration: '25:00',
+    durationSecs: 1500,
+    avgViewDuration: '12:51',
+    avgViewDurationSecs: 771,
+    views: 243591,
+    ctr: 8.9,
+    rpm: 427.3866,
+    cpm: 58.65,
+    publishDate: '2026-07-21',
+    thumbnail: '/thumbnails/this_man_loves_you.png',
+    category: 'Entertainment',
+    watchTimeHrs: 52140,
+    revenue: 104107.53,
+    revenueFormatted: '₹1,04,107.53',
+    watchTimeHrsFormatted: '52.14K hrs',
+    subscribersGained: 4157,
+    subscribersLost: 0,
+    netSubscribers: 4157,
+    subscribersNet: 4157,
+    viewsFormatted: '243.6K',
+    subscribersNetFormatted: '+4.2K',
+    subscribersGainedFormatted: '+4.2K',
+    realtimeViews48h: 185,
+    realtimeViews60m: 18,
+    topContentViews: 185
   },
   {
     id: 'VID005',
