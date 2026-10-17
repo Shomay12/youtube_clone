@@ -37,6 +37,10 @@ export const VIDEO_ID_TO_DATE = {
 };
 
 export const TITLE_TO_SCHEDULE_DATE = {
+  '6 Signs your Soulmate Is About To Enter Your Life': '2026-07-21',
+  'Why You Can\'t Stop Thinking About One Particular Person': '2026-07-16',
+  'Your Soulmate Is Closer Than You Think -Here Are The Signs ': '2026-07-11',
+  'Your Soulmate Is Closer Than You Think -Here Are The Signs': '2026-07-11',
   'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-07-21',
   'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-07-16',
   'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-07-11',
@@ -65,8 +69,9 @@ export const VIDEO_PUBLISH_SCHEDULE = [
 export const RAW_VIDEOS = [
   {
     id: 'VID001',
-    title: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
-    description: 'This Man Truly Loves You But Why Is There Still Another Woman in His Life?',
+    sortOrder: 1,
+    title: '6 Signs your Soulmate Is About To Enter Your Life',
+    description: '6 Signs your Soulmate Is About To Enter Your Life',
     duration: '25:00',
     durationSecs: 1500,
     avgViewDuration: '12:51',
@@ -76,7 +81,7 @@ export const RAW_VIDEOS = [
     rpm: 427.3866,
     cpm: 58.65,
     publishDate: '2026-07-21',
-    thumbnail: '/thumbnails/latest_video.png',
+    thumbnail: '/thumbnails/soulmate_enter_life.png',
     category: 'Entertainment',
     watchTimeHrs: 52140,
     revenue: 104107.53,
@@ -95,8 +100,9 @@ export const RAW_VIDEOS = [
   },
   {
     id: 'VID002',
-    title: 'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker',
-    description: 'Full 14 minute long AI video creation masterclass.',
+    sortOrder: 2,
+    title: 'Why You Can\'t Stop Thinking About One Particular Person',
+    description: 'Why You Can\'t Stop Thinking About One Particular Person',
     duration: '14:22',
     durationSecs: 862,
     avgViewDuration: '3:45',
@@ -106,14 +112,15 @@ export const RAW_VIDEOS = [
     rpm: 33.80,
     cpm: 58.14,
     publishDate: '2026-07-16',
-    thumbnail: '/thumbnails/2.webp',
+    thumbnail: '/thumbnails/stop_thinking_person.png',
     category: 'Entertainment',
     topContentViews: 1287
   },
   {
     id: 'VID003',
-    title: 'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker',
-    description: 'Nursery rhymes cartoon video creation using AI tools.',
+    sortOrder: 3,
+    title: 'Your Soulmate Is Closer Than You Think -Here Are The Signs ',
+    description: 'Your Soulmate Is Closer Than You Think -Here Are The Signs ',
     duration: '12:14',
     durationSecs: 734,
     avgViewDuration: '2:57',
@@ -123,7 +130,7 @@ export const RAW_VIDEOS = [
     rpm: 33.80,
     cpm: 58.14,
     publishDate: '2026-07-11',
-    thumbnail: '/thumbnails/3.webp',
+    thumbnail: '/thumbnails/soulmate_closer.png',
     category: 'Entertainment',
     topContentViews: 1198
   },

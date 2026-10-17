@@ -1239,7 +1239,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v31',
+      name: 'yt-studio-analytics-v32',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1272,7 +1272,16 @@ export const useStore = create(
             const sourceList = (hasDummyVideos || state.videos.length < 10) ? PROCESSED_VIDEOS : state.videos;
             const normalized = sourceList.map((v, idx) => {
               const isVid1 = v.id === 'VID001' || idx === 0;
-              const scheduledDate = TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21';
+              const isVid2 = v.id === 'VID002' || idx === 1;
+              const isVid3 = v.id === 'VID003' || idx === 2;
+              const title = isVid1
+                ? '6 Signs your Soulmate Is About To Enter Your Life'
+                : (isVid2
+                  ? "Why You Can't Stop Thinking About One Particular Person"
+                  : (isVid3
+                    ? 'Your Soulmate Is Closer Than You Think -Here Are The Signs '
+                    : v.title));
+              const scheduledDate = TITLE_TO_SCHEDULE_DATE[title] || TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21';
               const pubDate = v.publishDate || v.date || scheduledDate;
               const views = isVid1 ? 243591 : (Number(v.views) || 0);
               const watchTimeHrs = isVid1 ? 52140 : (Number(v.watchTimeHrs) || 0);
@@ -1283,12 +1292,21 @@ export const useStore = create(
               const topContentViews = isVid1 ? 1453 : (idx === 1 ? 1287 : (idx === 2 ? 1198 : (v.topContentViews || Math.round(views * 0.0055))));
               const rpm = isVid1 ? 427.3866 : (Number(v.rpm) || 33.64);
               const thumbNum = (idx % 7) + 1;
-              const fallbackThumb = idx === 0 ? '/thumbnails/latest_video.png' : `/thumbnails/${thumbNum}.webp`;
-              const thumbnail = (!v.thumbnail || v.thumbnail.includes('picsum.photos') || v.thumbnail.includes('example.com'))
+              const fallbackThumb = idx === 0 ? '/thumbnails/soulmate_enter_life.png' : `/thumbnails/${thumbNum}.webp`;
+              const customThumb = isVid1
+                ? '/thumbnails/soulmate_enter_life.png'
+                : (isVid2
+                  ? '/thumbnails/stop_thinking_person.png'
+                  : (isVid3
+                    ? '/thumbnails/soulmate_closer.png'
+                    : null));
+              const thumbnail = customThumb || ((!v.thumbnail || v.thumbnail.includes('picsum.photos') || v.thumbnail.includes('example.com'))
                 ? fallbackThumb
-                : v.thumbnail;
+                : v.thumbnail);
               return {
                 ...v,
+                title,
+                description: title,
                 views,
                 watchTimeHrs,
                 subscribersGained: subsGained,

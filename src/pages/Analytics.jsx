@@ -952,8 +952,8 @@ const Analytics = () => {
 
                     <div className="top-content-list">
                       {[...videos]
-                        .sort((a, b) => (b.views || 0) - (a.views || 0))
-                        .slice(0, 4)
+                        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                        .slice(0, 3)
                         .map((vid, idx) => {
                           const avgDurSecs = vid.avgViewDurationSecs || 240;
                           const totalViews = videos.reduce((s, v) => s + (v.views || 0), 0) || 1;
