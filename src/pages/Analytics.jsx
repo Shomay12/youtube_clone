@@ -1063,7 +1063,7 @@ const Analytics = () => {
                     {videos.slice(0, 3).map((v, idx) => {
                       const topViews = v.topContentViews !== undefined
                         ? Number(v.topContentViews)
-                        : (idx === 0 ? 316 : (idx === 1 ? 245 : (idx === 2 ? 186 : Math.round(Number(v.views || 0) * 0.0055))));
+                        : (idx === 0 ? 341 : (idx === 1 ? 245 : (idx === 2 ? 186 : Math.round(Number(v.views || 0) * 0.0055))));
                       return (
                         <div className="rail-content-row" key={v.id}>
                           <img 

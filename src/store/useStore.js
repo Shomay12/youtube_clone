@@ -126,22 +126,22 @@ const EMPTY_STATE = {
   hasCrmOverrides: true,
   channelInfo: {
     ...CHANNEL_BENCHMARKS,
-    subscribers: 138746,
-    subscribersFormatted: '1,38,746',
+    subscribers: 141578,
+    subscribersFormatted: '1,41,578',
     lifetimeViewsFormatted: '21.5M',
     totalUploads: PROCESSED_VIDEOS.length,
     hasExplicitChannelMetrics: true,
-    viewsLast28Days: 2640000,
-    viewsLast28DaysFormatted: '2.64M',
-    watchTimeLast28Days: 49190,
-    watchTimeLast28DaysFormatted: '49.19K hrs',
-    subscribersGainedLast28Days: 39140,
-    subscribersGainedLast28DaysFormatted: '+39.14K',
-    revenueLast28Days: 2123743.76,
-    revenueLast28DaysFormatted: '₹21,23,743.76',
-    totalRevenueFormatted: '₹21,23,743.76',
-    realtimeSubscribers: 138746,
-    realtimeViews48h: 36149,
+    viewsLast28Days: 2930000,
+    viewsLast28DaysFormatted: '2.93M',
+    watchTimeLast28Days: 55710,
+    watchTimeLast28DaysFormatted: '55.71K hrs',
+    subscribersGainedLast28Days: 43470,
+    subscribersGainedLast28DaysFormatted: '+43.47K',
+    revenueLast28Days: 2129374.37,
+    revenueLast28DaysFormatted: '₹21,29,374.37',
+    totalRevenueFormatted: '₹21,29,374.37',
+    realtimeSubscribers: 141578,
+    realtimeViews48h: 37487,
     realtimeViews60m: 2055,
     currency: 'INR'
   },
@@ -283,10 +283,10 @@ export const useStore = create(
       databaseError: null,
 
       // Date filtering state
-      simulationAnchorDate: '2026-10-16',
+      simulationAnchorDate: '2026-10-23',
       selectedDateRange: 'last28',
-      customStartDate: '2026-09-19',
-      customEndDate: '2026-10-16',
+      customStartDate: '2026-09-26',
+      customEndDate: '2026-10-23',
       realtimeDataset: INITIAL_REALTIME,
 
       ...EMPTY_STATE,
@@ -1239,30 +1239,30 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v35',
+      name: 'yt-studio-analytics-v36',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasCrmOverrides = true;
           state.selectedDateRange = 'last28';
-          state.simulationAnchorDate = '2026-10-16';
-          state.customStartDate = '2026-09-19';
-          state.customEndDate = '2026-10-16';
+          state.simulationAnchorDate = '2026-10-23';
+          state.customStartDate = '2026-09-26';
+          state.customEndDate = '2026-10-23';
           if (state.channelInfo) {
-            state.channelInfo.viewsLast28Days = 2640000;
-            state.channelInfo.viewsLast28DaysFormatted = '2.64M';
-            state.channelInfo.watchTimeLast28Days = 49190;
-            state.channelInfo.watchTimeLast28DaysFormatted = '49.19K hrs';
-            state.channelInfo.subscribersGainedLast28Days = 39140;
-            state.channelInfo.subscribersGainedLast28DaysFormatted = '+39.14K';
-            state.channelInfo.revenueLast28Days = 2123743.76;
-            state.channelInfo.revenueLast28DaysFormatted = '₹21,23,743.76';
-            state.channelInfo.totalRevenue = 2123743.76;
-            state.channelInfo.totalRevenueFormatted = '₹21,23,743.76';
-            state.channelInfo.subscribers = 138746;
-            state.channelInfo.subscribersFormatted = '1,38,746';
-            state.channelInfo.realtimeSubscribers = 138746;
-            state.channelInfo.realtimeViews48h = 36149;
+            state.channelInfo.viewsLast28Days = 2930000;
+            state.channelInfo.viewsLast28DaysFormatted = '2.93M';
+            state.channelInfo.watchTimeLast28Days = 55710;
+            state.channelInfo.watchTimeLast28DaysFormatted = '55.71K hrs';
+            state.channelInfo.subscribersGainedLast28Days = 43470;
+            state.channelInfo.subscribersGainedLast28DaysFormatted = '+43.47K';
+            state.channelInfo.revenueLast28Days = 2129374.37;
+            state.channelInfo.revenueLast28DaysFormatted = '₹21,29,374.37';
+            state.channelInfo.totalRevenue = 2129374.37;
+            state.channelInfo.totalRevenueFormatted = '₹21,29,374.37';
+            state.channelInfo.subscribers = 141578;
+            state.channelInfo.subscribersFormatted = '1,41,578';
+            state.channelInfo.realtimeSubscribers = 141578;
+            state.channelInfo.realtimeViews48h = 37487;
             state.channelInfo.currency = 'INR';
             state.channelInfo.hasExplicitChannelMetrics = true;
           }
@@ -1294,14 +1294,14 @@ export const useStore = create(
                       ? '2026-07-21'
                       : (TITLE_TO_SCHEDULE_DATE[title] || TITLE_TO_SCHEDULE_DATE[v.title] || VIDEO_ID_TO_DATE[v.id] || VIDEO_PUBLISH_SCHEDULE[idx] || '2026-07-21'))));
               const pubDate = isVid1 ? '2026-08-07' : (isVid2 ? '2026-08-03' : (isVid3 ? '2026-07-28' : (isVid4 ? '2026-07-21' : (v.publishDate || v.date || scheduledDate))));
-              const views = (isVid1 || isVid4) ? 243591 : (Number(v.views) || 0);
-              const watchTimeHrs = (isVid1 || isVid4) ? 52140 : (Number(v.watchTimeHrs) || 0);
-              const subsGained = (isVid1 || isVid4) ? 4157 : Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
-              const netSubs = (isVid1 || isVid4) ? 4157 : Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
-              const revenue = (isVid1 || isVid4) ? 104107.53 : (Number(v.revenue) || 0);
-              const realtimeViews48h = isVid1 ? 316 : (isVid2 ? 245 : (isVid3 ? 186 : (isVid4 ? 185 : (Number(v.realtimeViews48h) || 0))));
-              const topContentViews = isVid1 ? 316 : (isVid2 ? 245 : (isVid3 ? 186 : (isVid4 ? 185 : (v.topContentViews || Math.round(views * 0.0055)))));
-              const rpm = (isVid1 || isVid4) ? 427.3866 : (Number(v.rpm) || 33.64);
+              const views = (isVid1 || isVid4) ? 246809 : (Number(v.views) || 0);
+              const watchTimeHrs = (isVid1 || isVid4) ? 52830 : (Number(v.watchTimeHrs) || 0);
+              const subsGained = (isVid1 || isVid4) ? 4015 : Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.subscribers || 0));
+              const netSubs = (isVid1 || isVid4) ? 4015 : Number(v.netSubscribers !== undefined ? v.netSubscribers : subsGained);
+              const revenue = (isVid1 || isVid4) ? 105482.56 : (Number(v.revenue) || 0);
+              const realtimeViews48h = isVid1 ? 341 : (isVid2 ? 245 : (isVid3 ? 186 : (isVid4 ? 185 : (Number(v.realtimeViews48h) || 0))));
+              const topContentViews = isVid1 ? 341 : (isVid2 ? 245 : (isVid3 ? 186 : (isVid4 ? 185 : (v.topContentViews || Math.round(views * 0.0055)))));
+              const rpm = (isVid1 || isVid4) ? 427.3853 : (Number(v.rpm) || 33.64);
               const duration = (isVid1 || isVid4) ? '25:00' : (v.duration || '10:00');
               const durationSecs = (isVid1 || isVid4) ? 1500 : (v.durationSecs || 600);
               const avgViewDuration = (isVid1 || isVid4) ? '12:51' : (v.avgViewDuration || '3:00');
@@ -1348,11 +1348,11 @@ export const useStore = create(
                 publishDate: pubDate,
                 date: pubDate,
                 sortOrder: isVid1 ? 1 : (isVid2 ? 2 : (isVid3 ? 3 : (isVid4 ? 4 : (v.sortOrder !== undefined ? v.sortOrder : idx + 1)))),
-                revenueFormatted: (isVid1 || isVid4) ? '₹1,04,107.53' : formatINR(v.revenueFormatted || revenue),
-                subscribersNetFormatted: (isVid1 || isVid4) ? '+4.2K' : fmtS(netSubs),
-                subscribersGainedFormatted: (isVid1 || isVid4) ? '+4.2K' : fmtS(subsGained),
-                viewsFormatted: (isVid1 || isVid4) ? '243.6K' : fmtV(views),
-                watchTimeHrsFormatted: (isVid1 || isVid4) ? '52.14K hrs' : fmtW(watchTimeHrs)
+                revenueFormatted: (isVid1 || isVid4) ? '₹1,05,482.56' : formatINR(v.revenueFormatted || revenue),
+                subscribersNetFormatted: (isVid1 || isVid4) ? '+4.0K' : fmtS(netSubs),
+                subscribersGainedFormatted: (isVid1 || isVid4) ? '+4.0K' : fmtS(subsGained),
+                viewsFormatted: (isVid1 || isVid4) ? '246.8K' : fmtV(views),
+                watchTimeHrsFormatted: (isVid1 || isVid4) ? '52.83K hrs' : fmtW(watchTimeHrs)
               };
             });
             // Sort descending strictly
