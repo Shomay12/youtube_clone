@@ -37,7 +37,9 @@ const TopNav = ({ onToggleSidebar }) => {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
@@ -56,48 +58,91 @@ const TopNav = ({ onToggleSidebar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (isMobileSearchOpen && mobileSearchInputRef.current) {
+      mobileSearchInputRef.current.focus();
+    }
+  }, [isMobileSearchOpen]);
+
   const handleSelectSearchResult = (path) => {
     setShowSearchResults(false);
+    setIsMobileSearchOpen(false);
     setSearchQuery('');
     navigate(path);
   };
 
   return (
     <>
-      <header className="top-nav">
-        <div className="left-section">
-          <button className="menu-btn" onClick={onToggleSidebar} title="Collapse sidebar">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <div className="logo-container" onClick={() => navigate('/channel/UCqpdVWIzEQUcbf4pAxlneOQ/dashboard')}>
-            <img 
-              src="https://www.gstatic.com/youtube/img/creator/yt_studio_logo.svg" 
-              alt="YouTube Studio" 
-              className="studio-logo"
-            />
-          </div>
-        </div>
-
-        {/* Center Search Bar */}
-        <div className="center-section" ref={searchRef}>
-          <div className="search-box">
-            <span className="material-symbols-outlined search-icon">search</span>
-            <input 
-              type="text" 
-              placeholder="Search across your channel" 
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSearchResults(true);
+      <header className={`top-nav ${isMobileSearchOpen ? 'mobile-search-active' : ''}`}>
+        {isMobileSearchOpen ? (
+          <div className="mobile-search-header" ref={searchRef}>
+            <button 
+              className="menu-btn mobile-search-back-btn" 
+              onClick={() => {
+                setIsMobileSearchOpen(false);
+                setShowSearchResults(false);
               }}
-              onFocus={() => setShowSearchResults(true)}
-            />
-            {searchQuery && (
-              <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            )}
+              aria-label="Back"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div className="search-box mobile-search-box">
+              <input 
+                ref={mobileSearchInputRef}
+                type="text" 
+                placeholder="Search across channel..." 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+              />
+              {searchQuery && (
+                <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              )}
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="left-section">
+              <button className="menu-btn" onClick={onToggleSidebar} title="Open menu" aria-label="Open menu">
+                <span className="material-symbols-outlined">menu</span>
+              </button>
+              <div className="logo-container" onClick={() => navigate('/channel/UCqpdVWIzEQUcbf4pAxlneOQ/dashboard')}>
+                <img 
+                  src="https://www.gstatic.com/youtube/img/creator/yt_studio_logo.svg" 
+                  alt="YouTube Studio" 
+                  className="studio-logo"
+                />
+              </div>
+            </div>
+
+            {/* Desktop Center Search Bar */}
+            <div className="center-section desktop-search-section" ref={searchRef}>
+              <div className="search-box">
+                <span className="material-symbols-outlined search-icon">search</span>
+                <input 
+                  type="text" 
+                  placeholder="Search across your channel" 
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => setShowSearchResults(true)}
+                />
+                {searchQuery && (
+                  <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
           {/* Search Dropdown Panel */}
           {showSearchResults && searchQuery.trim() && (
@@ -152,15 +197,26 @@ const TopNav = ({ onToggleSidebar }) => {
               )}
             </div>
           )}
-        </div>
 
         {/* Right Nav Actions */}
         <div className="right-section">
+          {/* Mobile Search Trigger Button */}
+          {!isMobileSearchOpen && (
+            <button 
+              className="icon-action-btn mobile-search-trigger-btn"
+              onClick={() => setIsMobileSearchOpen(true)}
+              title="Search"
+              aria-label="Search"
+            >
+              <span className="material-symbols-outlined">search</span>
+            </button>
+          )}
+
           {/* Mode Switcher & OAuth Sync Buttons */}
           <div className="yt-auth-controls">
             {mode === 'connected' ? (
               <>
-                <span className="mode-tag connected">Connected Mode</span>
+                <span className="mode-tag connected desktop-only">Connected</span>
                 <button 
                   className="yt-sync-btn" 
                   onClick={() => syncWithYouTube(true)} 
@@ -168,7 +224,7 @@ const TopNav = ({ onToggleSidebar }) => {
                   title="Sync with YouTube"
                 >
                   <span className={`material-symbols-outlined ${isSyncing ? 'spinning' : ''}`}>sync</span>
-                  <span>{isSyncing ? 'Syncing...' : 'Sync with YouTube'}</span>
+                  <span className="sync-btn-text">{isSyncing ? 'Syncing...' : 'Sync'}</span>
                 </button>
               </>
             ) : null}
@@ -176,7 +232,7 @@ const TopNav = ({ onToggleSidebar }) => {
 
           {/* Help Button -> Studio CRM Control Panel */}
           <button 
-            className="icon-action-btn" 
+            className="icon-action-btn help-action-btn desktop-only" 
             onClick={() => navigate('/crm')} 
             title="Studio CRM Control Panel"
           >

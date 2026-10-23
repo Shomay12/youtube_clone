@@ -16,6 +16,7 @@ dist/
 
 # Installers
 *.dmg
+*.apk
 
 # OAuth secrets
 client_secret*.json

@@ -522,3 +522,137 @@
   100% { transform: rotate(360deg); }
 }
 
+/* ─── Responsive & Mobile Styles for TopNav ─── */
+.mobile-search-trigger-btn {
+  display: none;
+}
+
+.mobile-search-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .top-nav {
+    height: 54px;
+    padding: 0 8px;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .left-section {
+    width: auto;
+    gap: 4px;
+  }
+
+  .studio-logo {
+    height: 19px;
+  }
+
+  .desktop-search-section {
+    display: none;
+  }
+
+  .mobile-search-trigger-btn {
+    display: flex;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .right-section {
+    gap: 4px;
+  }
+
+  .yt-auth-controls {
+    margin-right: 2px;
+    gap: 4px;
+  }
+
+  .yt-sync-btn {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .sync-btn-text {
+    display: none;
+  }
+
+  .create-btn {
+    padding: 4px 10px;
+    font-size: 13px;
+    gap: 4px;
+  }
+
+  .create-btn span.material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  /* Full-width mobile search header */
+  .mobile-search-active {
+    padding: 0 6px;
+  }
+
+  .mobile-search-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+    position: relative;
+  }
+
+  .mobile-search-back-btn {
+    padding: 6px;
+  }
+
+  .mobile-search-box {
+    flex: 1;
+    max-width: 100%;
+    height: 38px;
+    border-radius: 20px;
+    background-color: #f1f3f4;
+    border: 1px solid #dcdcdc;
+    padding: 2px 12px;
+  }
+
+  .mobile-search-box input {
+    font-size: 14px;
+  }
+
+  /* Panels positioning on mobile */
+  .search-results-panel {
+    position: fixed;
+    top: 54px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    transform: none;
+    max-height: 70vh;
+    border-radius: 8px;
+  }
+
+  .notifications-drawer {
+    position: fixed;
+    top: 54px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    border-radius: 8px;
+  }
+
+  .create-dropdown-menu,
+  .profile-dropdown-menu {
+    position: fixed;
+    top: 54px;
+    right: 8px;
+    width: 250px;
+    max-width: calc(100vw - 16px);
+    border-radius: 8px;
+  }
+}
+
+

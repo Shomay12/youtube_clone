@@ -104,6 +104,19 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Mobile Channel Summary Banner (YouTube Studio Mobile Style) */}
+      <div className="mobile-channel-banner">
+        <img 
+          src={channelInfo?.avatar || 'https://ui-avatars.com/api/?name=User&background=random'} 
+          alt="Channel Avatar" 
+          className="mobile-channel-avatar" 
+        />
+        <div className="mobile-channel-text">
+          <h2 className="mobile-channel-name">{channelInfo?.name || 'Your Channel'}</h2>
+          <span className="mobile-channel-subs">{channelInfo?.subscribersFormatted || (channelInfo?.subscribers ? channelInfo.subscribers.toLocaleString('en-IN') : '0')} subscribers</span>
+        </div>
+      </div>
+
       {spreadsheetWarnings && spreadsheetWarnings.length > 0 && (
         <div style={{ backgroundColor: 'rgba(255,171,0,0.1)', border: '1px solid #ffab00', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', color: '#ffc400', fontSize: '13px' }}>
           <strong>Spreadsheet CMS Status:</strong>

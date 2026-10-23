@@ -18,19 +18,32 @@ import Customization from './pages/Customization';
 import AudioLibrary from './pages/AudioLibrary';
 import CRM from './pages/CRM';
 
+import MobileBottomNav from './components/MobileBottomNav';
+
 const CHANNEL_PREFIX = '/channel/UCqpdVWIzEQUcbf4pAxlneOQ';
 
 function AppContent() {
   useSpreadsheetSync();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const handleToggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setIsMobileDrawerOpen(prev => !prev);
+    } else {
+      setIsSidebarCollapsed(prev => !prev);
+    }
+  };
 
   return (
     <div className="app-container">
-      <TopNav onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+      <TopNav onToggleSidebar={handleToggleSidebar} />
       <div className="main-content-wrapper">
         <Sidebar 
           isCollapsed={isSidebarCollapsed} 
+          isMobileOpen={isMobileDrawerOpen}
+          onCloseMobile={() => setIsMobileDrawerOpen(false)}
           onOpenSettings={() => setShowSettingsModal(true)} 
         />
         <main className="main-content">
@@ -68,9 +81,12 @@ function AppContent() {
         </main>
       </div>
 
+      <MobileBottomNav onOpenMenu={() => setIsMobileDrawerOpen(true)} />
+
       {showSettingsModal && (
         <SettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
+      <Toast />
     </div>
   );
 }

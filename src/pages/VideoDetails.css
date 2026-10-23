@@ -264,3 +264,27 @@
 .check-ic {
   font-size: 24px;
 }
+
+@media (max-width: 860px) {
+  .video-details-content {
+    flex-direction: column-reverse;
+    gap: 20px;
+  }
+
+  .form-row-2 {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .video-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+

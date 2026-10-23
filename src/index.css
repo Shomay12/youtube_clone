@@ -108,6 +108,12 @@ img {
   -webkit-transform: translateZ(0);
 }
 
+@media (max-width: 768px) {
+  .main-content {
+    padding: 12px 12px 72px 12px;
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

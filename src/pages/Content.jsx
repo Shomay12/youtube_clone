@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, fmtV } from '../store/useStore';
 import { VIDEO_ID_TO_DATE, TITLE_TO_SCHEDULE_DATE, VIDEO_PUBLISH_SCHEDULE } from '../engine/AnalyticsSimulationEngine';
 import './Content.css';
 
@@ -224,6 +224,7 @@ const Content = () => {
 
       {/* Main Content Table */}
       <div className="table-container">
+        <div className="desktop-table-view">
         {activeTab === 'Playlists' ? (
           <table className="content-table">
             <thead>
@@ -388,6 +389,113 @@ const Content = () => {
             </tbody>
           </table>
         )}
+        </div>
+
+        {/* Mobile Native Video List Cards (YouTube Studio Mobile Style) */}
+        <div className="mobile-cards-view">
+          {paginatedList.length === 0 ? (
+            <div className="mobile-no-content">No items found matching filter.</div>
+          ) : activeTab === 'Playlists' ? (
+            paginatedList.map(pl => (
+              <div key={pl.id} className="mobile-content-card">
+                <div className="mobile-card-thumb-wrap playlist-thumb-placeholder">
+                  <span className="material-symbols-outlined pl-large-icon">playlist_play</span>
+                  <span className="mobile-card-duration">{pl.videoCount} videos</span>
+                </div>
+                <div className="mobile-card-body">
+                  <h3 className="mobile-card-title">{pl.title}</h3>
+                  <div className="mobile-card-meta">
+                    <span className="material-symbols-outlined mobile-meta-icon">public</span>
+                    <span>{pl.visibility}</span>
+                    <span className="mobile-meta-dot">•</span>
+                    <span>Updated {pl.lastUpdated}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : activeTab === 'Podcasts' ? (
+            paginatedList.map(pod => (
+              <div key={pod.id} className="mobile-content-card">
+                <div className="mobile-card-thumb-wrap playlist-thumb-placeholder">
+                  <span className="material-symbols-outlined pl-large-icon">podcasts</span>
+                  <span className="mobile-card-duration">{pod.episodes} eps</span>
+                </div>
+                <div className="mobile-card-body">
+                  <h3 className="mobile-card-title">{pod.title}</h3>
+                  <div className="mobile-card-meta">
+                    <span className="material-symbols-outlined mobile-meta-icon">public</span>
+                    <span>{pod.visibility}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            paginatedList.map(item => {
+              const rev = item.revenue != null ? Number(item.revenue) : parseFloat((((Number(item.views) || 0) / 1000) * (Number(item.rpm) || 33.64)).toFixed(2));
+              const commentsCount = item.comments != null ? Number(item.comments) : Math.round((Number(item.views) || 0) * 0.0034);
+              const isUnlisted = item.visibility === 'Unlisted';
+              const isPrivate = item.visibility === 'Private';
+
+              return (
+                <div 
+                  key={item.id} 
+                  className="mobile-content-card"
+                  onClick={() => navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`)}
+                >
+                  <div className="mobile-card-thumb-wrap">
+                    <img 
+                      src={item.thumbnail || '/thumbnails/1.webp'} 
+                      onError={(e) => { e.currentTarget.src = '/thumbnails/latest_video.png'; }} 
+                      alt={item.title} 
+                      className="mobile-card-thumb" 
+                    />
+                    {item.duration && <span className="mobile-card-duration">{item.duration}</span>}
+                  </div>
+                  <div className="mobile-card-body">
+                    <h3 className="mobile-card-title">{item.title}</h3>
+                    <div className="mobile-card-meta">
+                      <span className="material-symbols-outlined mobile-meta-icon">
+                        {isUnlisted ? 'link' : isPrivate ? 'lock' : 'public'}
+                      </span>
+                      <span>{item.visibility || 'Public'}</span>
+                      <span className="mobile-meta-dot">•</span>
+                      <span>{formatContentDate(item.publishDate || item.date)}</span>
+                    </div>
+                    <div className="mobile-card-stats">
+                      <span className="mobile-card-stat">
+                        <span className="material-symbols-outlined stat-icon">visibility</span>
+                        {fmtV(item.views || 0)}
+                      </span>
+                      <span className="mobile-card-stat">
+                        <span className="material-symbols-outlined stat-icon">thumb_up</span>
+                        {fmtV(Math.round((Number(item.views) || 0) * 0.042))}
+                      </span>
+                      <span className="mobile-card-stat">
+                        <span className="material-symbols-outlined stat-icon">chat_bubble</span>
+                        {fmtV(commentsCount)}
+                      </span>
+                      {rev > 0 && (
+                        <span className="mobile-card-stat rev-stat">
+                          {formatINR(rev)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button 
+                    className="mobile-card-menu-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/channel/UCqpdVWIzEQUcbf4pAxlneOQ/video/${item.id}`);
+                    }}
+                    aria-label="Options"
+                  >
+                    <span className="material-symbols-outlined">more_vert</span>
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Pagination Footer */}

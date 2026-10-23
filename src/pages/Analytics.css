@@ -1574,3 +1574,66 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .analytics-page {
+    padding: 10px 8px 30px 8px;
+    width: 100%;
+  }
+
+  .analytics-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .dashboard-title {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .analytics-header-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .advanced-mode-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .analytics-prompt-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+
+  .analytics-prompt-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .prompt-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Metric cards grid */
+  .metrics-summary-container,
+  .kpi-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chart-container-wrapper {
+    overflow-x: auto;
+    min-height: 240px;
+  }
+}
+

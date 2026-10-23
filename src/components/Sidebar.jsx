@@ -3,10 +3,16 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import './Sidebar.css';
 
-const Sidebar = ({ isCollapsed, onOpenSettings }) => {
+const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onOpenSettings }) => {
   const { channelInfo, videos } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleNavClick = () => {
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
 
   const videoMatch = location.pathname.match(/\/video\/([^/]+)/);
   const searchParams = new URLSearchParams(location.search);
@@ -58,74 +64,115 @@ const Sidebar = ({ isCollapsed, onOpenSettings }) => {
   };
 
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {!isCollapsed && (
-        isVideoContext ? (
-          <div className="video-sidebar-header">
-            <button className="back-to-content-btn" onClick={() => navigate('/channel/UCqpdVWIzEQUcbf4pAxlneOQ/content/videos')}>
-              <span className="material-symbols-outlined">arrow_back</span>
-              <span>Channel content</span>
-            </button>
-            <div className="video-sidebar-card">
-              <div className="video-thumb-wrapper">
-                <img 
-                  src={currentVideo.thumbnail || '/thumbnails/latest_video.png'} 
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/thumbnails/latest_video.png';
-                  }} 
-                  alt="Video thumb" 
-                  className="video-card-thumb" 
-                />
-                <span className="video-card-duration">{currentVideo.duration}</span>
-              </div>
-              <span className="video-card-tag">Your video</span>
-              <p className="video-card-title">{currentVideo.title}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="profile-section">
+    <>
+      <div 
+        className={`sidebar-backdrop ${isMobileOpen ? 'active' : ''}`} 
+        onClick={onCloseMobile}
+        aria-hidden="true"
+      />
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-mobile-header">
+          <div className="sidebar-mobile-brand">
             <img 
-              src={channelInfo?.avatar || 'https://ui-avatars.com/api/?name=User&background=random'} 
-              alt="Channel Avatar" 
-              className="channel-avatar" 
+              src="https://www.gstatic.com/youtube/img/creator/yt_studio_logo.svg" 
+              alt="YouTube Studio" 
+              className="studio-logo"
             />
-            <h2 className="channel-name">Your channel</h2>
-            <p className="channel-subtitle">{channelInfo?.name}</p>
           </div>
-        )
-      )}
-
-      <nav className="nav-menu">
-        {activeMenuItems.map((item, index) => {
-          const active = isMenuItemActive(item);
-          return (
-            <NavLink 
-              to={item.path} 
-              key={index} 
-              className={`nav-item ${active ? 'active' : ''}`}
-              title={isCollapsed ? item.label : ''}
-            >
-              <span className={`material-symbols-outlined nav-icon ${active ? 'active-icon' : ''}`}>
-                {item.icon}
-              </span>
-              {!isCollapsed && <span className="nav-label">{item.label}</span>}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      <div className="bottom-menu">
-        <div className="nav-item" onClick={onOpenSettings} title={isCollapsed ? 'Settings' : ''}>
-          <span className="material-symbols-outlined nav-icon">settings</span>
-          {!isCollapsed && <span className="nav-label">Settings</span>}
+          <button className="sidebar-mobile-close-btn" onClick={onCloseMobile} aria-label="Close menu">
+            <span className="material-symbols-outlined">close</span>
+          </button>
         </div>
-        <div className="nav-item" title={isCollapsed ? 'Send feedback' : ''}>
-          <span className="material-symbols-outlined nav-icon">feedback</span>
-          {!isCollapsed && <span className="nav-label">Send feedback</span>}
+
+        {!isCollapsed && (
+          isVideoContext ? (
+            <div className="video-sidebar-header">
+              <button 
+                className="back-to-content-btn" 
+                onClick={() => {
+                  handleNavClick();
+                  navigate('/channel/UCqpdVWIzEQUcbf4pAxlneOQ/content/videos');
+                }}
+              >
+                <span className="material-symbols-outlined">arrow_back</span>
+                <span>Channel content</span>
+              </button>
+              <div className="video-sidebar-card">
+                <div className="video-thumb-wrapper">
+                  <img 
+                    src={currentVideo.thumbnail || '/thumbnails/latest_video.png'} 
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/thumbnails/latest_video.png';
+                    }} 
+                    alt="Video thumb" 
+                    className="video-card-thumb" 
+                  />
+                  <span className="video-card-duration">{currentVideo.duration}</span>
+                </div>
+                <span className="video-card-tag">Your video</span>
+                <p className="video-card-title">{currentVideo.title}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="profile-section">
+              <img 
+                src={channelInfo?.avatar || 'https://ui-avatars.com/api/?name=User&background=random'} 
+                alt="Channel Avatar" 
+                className="channel-avatar" 
+              />
+              <h2 className="channel-name">Your channel</h2>
+              <p className="channel-subtitle">{channelInfo?.name}</p>
+            </div>
+          )
+        )}
+
+        <nav className="nav-menu">
+          {activeMenuItems.map((item, index) => {
+            const active = isMenuItemActive(item);
+            return (
+              <NavLink 
+                to={item.path} 
+                key={index} 
+                className={`nav-item ${active ? 'active' : ''}`}
+                title={isCollapsed ? item.label : ''}
+                onClick={handleNavClick}
+              >
+                <span className={`material-symbols-outlined nav-icon ${active ? 'active-icon' : ''}`}>
+                  {item.icon}
+                </span>
+                {!isCollapsed && <span className="nav-label">{item.label}</span>}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="bottom-menu">
+          <div 
+            className="nav-item" 
+            onClick={() => {
+              handleNavClick();
+              navigate('/crm');
+            }} 
+            title={isCollapsed ? 'CRM Management' : ''}
+          >
+            <span className="material-symbols-outlined nav-icon">tune</span>
+            {!isCollapsed && <span className="nav-label">CRM Control Panel</span>}
+          </div>
+          <div 
+            className="nav-item" 
+            onClick={() => {
+              handleNavClick();
+              onOpenSettings?.();
+            }} 
+            title={isCollapsed ? 'Settings' : ''}
+          >
+            <span className="material-symbols-outlined nav-icon">settings</span>
+            {!isCollapsed && <span className="nav-label">Settings</span>}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 
