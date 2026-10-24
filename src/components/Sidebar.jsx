@@ -152,23 +152,22 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onOpenSettings }) =
             className="nav-item" 
             onClick={() => {
               handleNavClick();
-              navigate('/crm');
-            }} 
-            title={isCollapsed ? 'CRM Management' : ''}
-          >
-            <span className="material-symbols-outlined nav-icon">tune</span>
-            {!isCollapsed && <span className="nav-label">CRM Control Panel</span>}
-          </div>
-          <div 
-            className="nav-item" 
-            onClick={() => {
-              handleNavClick();
               onOpenSettings?.();
             }} 
             title={isCollapsed ? 'Settings' : ''}
           >
             <span className="material-symbols-outlined nav-icon">settings</span>
             {!isCollapsed && <span className="nav-label">Settings</span>}
+          </div>
+          <div 
+            className="nav-item" 
+            onClick={() => {
+              handleNavClick();
+            }} 
+            title={isCollapsed ? 'Send feedback' : ''}
+          >
+            <span className="material-symbols-outlined nav-icon">feedback</span>
+            {!isCollapsed && <span className="nav-label">Send feedback</span>}
           </div>
         </div>
       </aside>

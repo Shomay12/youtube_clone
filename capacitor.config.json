@@ -1,8 +1,0 @@
-{
-  "appId": "com.youtube.studio.clone",
-  "appName": "YouTube Studio",
-  "webDir": "dist",
-  "server": {
-    "androidScheme": "https"
-  }
-}

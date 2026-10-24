@@ -230,11 +230,11 @@ const TopNav = ({ onToggleSidebar }) => {
             ) : null}
           </div>
 
-          {/* Help Button -> Studio CRM Control Panel */}
+          {/* Help Button */}
           <button 
             className="icon-action-btn help-action-btn desktop-only" 
-            onClick={() => navigate('/crm')} 
-            title="Studio CRM Control Panel"
+            onClick={() => setShowHelpModal(true)} 
+            title="Help"
           >
             <span className="material-symbols-outlined">help</span>
           </button>
