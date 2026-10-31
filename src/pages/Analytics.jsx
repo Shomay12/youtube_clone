@@ -631,7 +631,6 @@ const Analytics = () => {
               <div className="date-picker-dropdown">
                 <div className="dropdown-active-header">
                   <div className="dropdown-active-title">{activePresetLabel}</div>
-                  <div className="dropdown-updated-pill">Updated 1 min ago</div>
                 </div>
 
                 {DATE_PRESET_GROUPS.map((group, gIdx) => (
