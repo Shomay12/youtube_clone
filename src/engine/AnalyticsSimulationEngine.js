@@ -97,7 +97,14 @@ export const RAW_VIDEOS = [
     subscribersGainedFormatted: '+3.9K',
     realtimeViews48h: 354,
     realtimeViews60m: 18,
-    topContentViews: 354
+    topContentViews: 354,
+    realtimeTrafficSources: {
+      browse: 55,
+      search: 18,
+      channel: 14.2,
+      other: 9.2,
+      external: 3.6
+    }
   },
   {
     id: 'VID002',

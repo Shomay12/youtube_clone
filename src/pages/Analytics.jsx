@@ -553,12 +553,23 @@ const Analytics = () => {
   }, [realtimeDataset, realtime48hViews]);
 
   const videoTrafficSources = currentVideo?.realtimeTrafficSources || {
-    search: 47.5,
-    browse: 18.6,
+    browse: 55,
+    search: 18,
     channel: 14.2,
-    other: 9.3,
+    other: 9.2,
     external: 3.6
   };
+
+  const sortedVideoTrafficSources = useMemo(() => {
+    const list = [
+      { label: 'Browse features', value: Number(videoTrafficSources?.browse ?? 55) },
+      { label: 'YouTube search', value: Number(videoTrafficSources?.search ?? 18) },
+      { label: 'Channel pages', value: Number(videoTrafficSources?.channel ?? 14.2) },
+      { label: 'Other YouTube features', value: Number(videoTrafficSources?.other ?? 9.2) },
+      { label: 'External', value: Number(videoTrafficSources?.external ?? 3.6) }
+    ];
+    return list.sort((a, b) => b.value - a.value);
+  }, [videoTrafficSources]);
 
   // Top videos sorted by revenue calculated using (Views / 1000) * RPM
   const topEarningVideos = useMemo(() => {
@@ -1032,26 +1043,12 @@ const Analytics = () => {
                       <span>Top traffic sources</span>
                       <span>% of views</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
-                      <span>YouTube search</span>
-                      <span>{videoTrafficSources.search}%</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
-                      <span>Browse features</span>
-                      <span>{videoTrafficSources.browse}%</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
-                      <span>Channel pages</span>
-                      <span>{videoTrafficSources.channel}%</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
-                      <span>Other YouTube features</span>
-                      <span>{videoTrafficSources.other}%</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
-                      <span>External</span>
-                      <span>{videoTrafficSources.external}%</span>
-                    </div>
+                    {sortedVideoTrafficSources.map(item => (
+                      <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                        <span>{item.label}</span>
+                        <span>{item.value}%</span>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="realtime-top-content-section">

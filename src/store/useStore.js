@@ -131,8 +131,8 @@ const EMPTY_STATE = {
     lifetimeViewsFormatted: '21.5M',
     totalUploads: PROCESSED_VIDEOS.length,
     hasExplicitChannelMetrics: true,
-    viewsLast28Days: 2170000,
-    viewsLast28DaysFormatted: '2.17M',
+    viewsLast28Days: 3170000,
+    viewsLast28DaysFormatted: '3.17M',
     watchTimeLast28Days: 59470,
     watchTimeLast28DaysFormatted: '59.47K hrs',
     subscribersGainedLast28Days: 45610,
@@ -1239,7 +1239,7 @@ export const useStore = create(
       }
     }),
     {
-      name: 'yt-studio-analytics-v37',
+      name: 'yt-studio-analytics-v38',
       storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -1249,8 +1249,8 @@ export const useStore = create(
           state.customStartDate = '2026-10-04';
           state.customEndDate = '2026-10-31';
           if (state.channelInfo) {
-            state.channelInfo.viewsLast28Days = 2170000;
-            state.channelInfo.viewsLast28DaysFormatted = '2.17M';
+            state.channelInfo.viewsLast28Days = 3170000;
+            state.channelInfo.viewsLast28DaysFormatted = '3.17M';
             state.channelInfo.watchTimeLast28Days = 59470;
             state.channelInfo.watchTimeLast28DaysFormatted = '59.47K hrs';
             state.channelInfo.subscribersGainedLast28Days = 45610;
@@ -1352,7 +1352,8 @@ export const useStore = create(
                 subscribersNetFormatted: isVid1 ? '+3.9K' : ((isVid4 ? '+4.0K' : fmtS(netSubs))),
                 subscribersGainedFormatted: isVid1 ? '+3.9K' : ((isVid4 ? '+4.0K' : fmtS(subsGained))),
                 viewsFormatted: isVid1 ? '249.4K' : ((isVid4 ? '246.8K' : fmtV(views))),
-                watchTimeHrsFormatted: isVid1 ? '53.83K hrs' : ((isVid4 ? '52.83K hrs' : fmtW(watchTimeHrs)))
+                watchTimeHrsFormatted: isVid1 ? '53.83K hrs' : ((isVid4 ? '52.83K hrs' : fmtW(watchTimeHrs))),
+                realtimeTrafficSources: isVid1 ? { browse: 55, search: 18, channel: 14.2, other: 9.2, external: 3.6 } : (v.realtimeTrafficSources || null)
               };
             });
             // Sort descending strictly
