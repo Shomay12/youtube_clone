@@ -369,7 +369,7 @@ export const useStore = create(
       // Date range changer
       setDateRange: (rangeKey, customStart = null, customEnd = null) => {
         set(state => {
-          const updates = { 
+          const updates = {
             selectedDateRange: rangeKey,
             dateRangeVersion: (state.dateRangeVersion || 0) + 1,
             hasCrmOverrides: true
@@ -536,8 +536,8 @@ export const useStore = create(
           const videoSubsGained = (targetVideo?.subscribersGained !== undefined && targetVideo?.subscribersGained !== null && Number(targetVideo?.subscribersGained) > 0)
             ? Number(targetVideo.subscribersGained)
             : ((targetVideo?.netSubscribers !== undefined && targetVideo?.netSubscribers !== null && Number(targetVideo?.netSubscribers) > 0)
-                ? Number(targetVideo.netSubscribers)
-                : Math.round(videoViews * 0.014));
+              ? Number(targetVideo.netSubscribers)
+              : Math.round(videoViews * 0.014));
           const videoSubsLost = targetVideo?.subscribersLost !== undefined
             ? Number(targetVideo.subscribersLost)
             : 0;
@@ -656,28 +656,28 @@ export const useStore = create(
         const currentTotalRevenue = storeVideos.reduce((acc, v) => acc + (v.revenue != null ? Number(v.revenue) : ((Number(v.views) || 0) / 1000 * (Number(v.rpm) || 33.64))), 0);
         const currentTotalWatch = storeVideos.reduce((acc, v) => acc + (v.watchTimeHrs != null ? Number(v.watchTimeHrs) : ((Number(v.views) || 0) * (Number(v.avgViewDurationSecs) || 105) / 3600)), 0);
         const scaledSubsGained = storeVideos.reduce((acc, v) => acc + Number(v.subscribersGained !== undefined ? v.subscribersGained : (v.netSubscribers !== undefined ? v.netSubscribers : (v.subscribers || 0))), 0) || Math.round(agg.subscribersNet);
-        const scaledSubsLost   = 0;
-        const scaledSubsNet    = scaledSubsGained;
+        const scaledSubsLost = 0;
+        const scaledSubsNet = scaledSubsGained;
 
         const ci = state.channelInfo || {};
         const is28Days = (activeKey === 'last28');
-        
+
         // Dynamic channel totals directly from actual video sums or explicit CRM metrics
-        const base28Views   = (ci.hasExplicitChannelMetrics && ci.viewsLast28Days !== undefined && ci.viewsLast28Days > 0) ? ci.viewsLast28Days : currentTotalViews;
+        const base28Views = (ci.hasExplicitChannelMetrics && ci.viewsLast28Days !== undefined && ci.viewsLast28Days > 0) ? ci.viewsLast28Days : currentTotalViews;
         const base28Revenue = (ci.hasExplicitChannelMetrics && ci.revenueLast28Days !== undefined && ci.revenueLast28Days > 0) ? ci.revenueLast28Days : currentTotalRevenue;
-        const base28Watch   = (ci.hasExplicitChannelMetrics && ci.watchTimeLast28Days !== undefined && ci.watchTimeLast28Days > 0) ? ci.watchTimeLast28Days : currentTotalWatch;
+        const base28Watch = (ci.hasExplicitChannelMetrics && ci.watchTimeLast28Days !== undefined && ci.watchTimeLast28Days > 0) ? ci.watchTimeLast28Days : currentTotalWatch;
         const base28SubsNet = (ci.hasExplicitChannelMetrics && ci.subscribersGainedLast28Days !== undefined && ci.subscribersGainedLast28Days > 0) ? ci.subscribersGainedLast28Days : scaledSubsNet;
 
-        const finalViews   = is28Days ? base28Views : Math.round(base28Views * (agg.views / (INITIAL_AGG.views || 1)));
+        const finalViews = is28Days ? base28Views : Math.round(base28Views * (agg.views / (INITIAL_AGG.views || 1)));
         const finalRevenue = is28Days ? base28Revenue : parseFloat((base28Revenue * (agg.revenue / (INITIAL_AGG.revenue || 1))).toFixed(2));
-        const finalWatch   = is28Days ? base28Watch : parseFloat((base28Watch * (agg.watchTimeHrs / (INITIAL_AGG.watchTimeHrs || 1))).toFixed(1));
+        const finalWatch = is28Days ? base28Watch : parseFloat((base28Watch * (agg.watchTimeHrs / (INITIAL_AGG.watchTimeHrs || 1))).toFixed(1));
         const finalSubsNet = is28Days ? base28SubsNet : Math.round(base28SubsNet * (agg.subscribersNet / (INITIAL_AGG.subscribersNet || 1)));
         const finalImpressions = Math.round(finalViews * 11.2);
 
         const viewsFmt = (is28Days && ci.hasExplicitChannelMetrics && ci.viewsLast28DaysFormatted) ? ci.viewsLast28DaysFormatted : fmtV(finalViews);
         const watchFmt = (is28Days && ci.hasExplicitChannelMetrics && ci.watchTimeLast28DaysFormatted) ? ci.watchTimeLast28DaysFormatted : fmtW(finalWatch);
-        const revFmt   = (is28Days && ci.hasExplicitChannelMetrics && ci.revenueLast28DaysFormatted) ? formatINR(ci.revenueLast28DaysFormatted) : formatINR(finalRevenue);
-        const subsFmt  = (is28Days && ci.hasExplicitChannelMetrics && ci.subscribersGainedLast28DaysFormatted) ? ci.subscribersGainedLast28DaysFormatted : fmtS(finalSubsNet);
+        const revFmt = (is28Days && ci.hasExplicitChannelMetrics && ci.revenueLast28DaysFormatted) ? formatINR(ci.revenueLast28DaysFormatted) : formatINR(finalRevenue);
+        const subsFmt = (is28Days && ci.hasExplicitChannelMetrics && ci.subscribersGainedLast28DaysFormatted) ? ci.subscribersGainedLast28DaysFormatted : fmtS(finalSubsNet);
 
         // Calculate target end views for channel from 48h realtime views velocity
         const channelRealtime48h = (ci.realtimeViews48h !== undefined && ci.realtimeViews48h !== null && Number(ci.realtimeViews48h) > 0)
@@ -693,12 +693,12 @@ export const useStore = create(
           const w = finalViews > 0 ? (dViews / finalViews) : (1 / (filteredDaily.length || 1));
           return {
             ...d,
-            views:          dViews,
-            revenue:        parseFloat((finalRevenue * w).toFixed(2)),
-            watchTimeHrs:   parseFloat((finalWatch   * w).toFixed(1)),
-            subscribersNet: Math.round(finalSubsNet  * w),
-            impressions:    Math.round(finalImpressions * w),
-            ctr:            agg.ctr || 8.9,
+            views: dViews,
+            revenue: parseFloat((finalRevenue * w).toFixed(2)),
+            watchTimeHrs: parseFloat((finalWatch * w).toFixed(1)),
+            subscribersNet: Math.round(finalSubsNet * w),
+            impressions: Math.round(finalImpressions * w),
+            ctr: agg.ctr || 8.9,
           };
         });
 
@@ -707,25 +707,25 @@ export const useStore = create(
           daily: scaledDaily,
           aggregated: {
             ...agg,
-            views:                   finalViews,
-            viewsFormatted:          viewsFmt,
-            watchTimeHrs:            finalWatch,
-            watchTimeHrsFormatted:   watchFmt,
-            revenue:                 finalRevenue,
-            revenueFormatted:        revFmt,
-            subscribersNet:          finalSubsNet,
+            views: finalViews,
+            viewsFormatted: viewsFmt,
+            watchTimeHrs: finalWatch,
+            watchTimeHrsFormatted: watchFmt,
+            revenue: finalRevenue,
+            revenueFormatted: revFmt,
+            subscribersNet: finalSubsNet,
             subscribersNetFormatted: subsFmt,
-            subscribersGained:       finalSubsNet,
+            subscribersGained: finalSubsNet,
             subscribersGainedFormatted: subsFmt,
-            subscribersLost:         scaledSubsLost,
-            impressions:             finalImpressions,
-            impressionsFormatted:    fmtV(finalImpressions),
-            ctr:                     agg.ctr || 8.9,
-            rpm:                     finalViews > 0 ? parseFloat(((finalRevenue / finalViews) * 1000).toFixed(2)) : (agg.rpm || 33.64),
-            cpm:                     agg.cpm || 58.00,
+            subscribersLost: scaledSubsLost,
+            impressions: finalImpressions,
+            impressionsFormatted: fmtV(finalImpressions),
+            ctr: agg.ctr || 8.9,
+            rpm: finalViews > 0 ? parseFloat(((finalRevenue / finalViews) * 1000).toFixed(2)) : (agg.rpm || 33.64),
+            cpm: agg.cpm || 58.00,
           },
           trafficSources: getTrafficSources(finalViews),
-          audience:       getAudienceBreakdown(finalViews),
+          audience: getAudienceBreakdown(finalViews),
         };
       },
 
@@ -1240,7 +1240,7 @@ export const useStore = create(
     }),
     {
       name: 'yt-studio-analytics-v40',
-      storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} })),
+      storage: createJSONStorage(() => (typeof window !== 'undefined' && window.localStorage ? window.localStorage : { getItem: () => null, setItem: () => { }, removeItem: () => { } })),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasCrmOverrides = true;
