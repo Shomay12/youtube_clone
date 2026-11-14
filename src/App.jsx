@@ -53,7 +53,9 @@ function AppContent() {
             {/* Real YouTube Studio Routes */}
             <Route path="/channel/:channelId/dashboard" element={<Dashboard />} />
             <Route path="/channel/:channelId/content/*" element={<Content />} />
+            <Route path="/channel/:channelId/video/:id/analytics/*" element={<Analytics />} />
             <Route path="/channel/:channelId/video/:id/edit" element={<VideoDetails />} />
+            <Route path="/channel/:channelId/video/:id/:section/*" element={<VideoDetails />} />
             <Route path="/channel/:channelId/video/:id" element={<VideoDetails />} />
             <Route path="/channel/:channelId/analytics/*" element={<Analytics />} />
             <Route path="/channel/:channelId/community/*" element={<Comments />} />
@@ -67,8 +69,9 @@ function AppContent() {
             {/* Backward compatibility redirects */}
             <Route path="/dashboard" element={<Navigate to={`${CHANNEL_PREFIX}/dashboard`} replace />} />
             <Route path="/content" element={<Navigate to={`${CHANNEL_PREFIX}/content/videos`} replace />} />
+            <Route path="/video/:id/analytics/*" element={<Analytics />} />
             <Route path="/video/:id" element={<Navigate to={`${CHANNEL_PREFIX}/video/:id/edit`} replace />} />
-            <Route path="/analytics" element={<Navigate to={`${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days`} replace />} />
+            <Route path="/analytics" element={<Navigate to={`${CHANNEL_PREFIX}/analytics/hub_overview`} replace />} />
             <Route path="/comments" element={<Navigate to={`${CHANNEL_PREFIX}/community/comments`} replace />} />
             <Route path="/subtitles" element={<Navigate to={`${CHANNEL_PREFIX}/languages`} replace />} />
             <Route path="/copyright" element={<Navigate to={`${CHANNEL_PREFIX}/content-detection`} replace />} />

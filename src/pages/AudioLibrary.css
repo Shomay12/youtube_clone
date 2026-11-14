@@ -22,7 +22,7 @@
 
 .track-name {
   font-weight: 500;
-  color: #fff;
+  color: #0f0f0f;
 }
 
 .genre-chip {
@@ -40,7 +40,7 @@
 .bottom-audio-player {
   position: fixed;
   bottom: 0;
-  left: 256px;
+  left: 216px;
   right: 0;
   height: 64px;
   background-color: #282828;

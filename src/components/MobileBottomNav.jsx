@@ -19,9 +19,9 @@ const navItems = [
   },
   {
     key: 'analytics',
-    label: 'Analytics',
-    icon: 'insert_chart',
-    path: `${CHANNEL_PREFIX}/analytics/tab-overview/period-last-28-days`,
+    label: 'Insights',
+    icon: 'bar_chart',
+    path: `${CHANNEL_PREFIX}/analytics/hub_overview`,
   },
   {
     key: 'community',

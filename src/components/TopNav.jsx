@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import UploadModal from './UploadModal';
+import AskStudioDrawer, { openAskStudio } from './AskStudioDrawer';
+import { AskSparkleIcon } from './StudioIcons';
 import './TopNav.css';
 
 const TopNav = ({ onToggleSidebar }) => {
@@ -230,6 +232,16 @@ const TopNav = ({ onToggleSidebar }) => {
             ) : null}
           </div>
 
+          {/* Feedback Button */}
+          <button
+            className="icon-action-btn desktop-only"
+            onClick={() => showToast('Send feedback dialog opened', 'info')}
+            title="Send feedback"
+            aria-label="Send feedback"
+          >
+            <span className="material-symbols-outlined">sms_failed</span>
+          </button>
+
           {/* Help Button */}
           <button 
             className="icon-action-btn help-action-btn desktop-only" 
@@ -279,11 +291,22 @@ const TopNav = ({ onToggleSidebar }) => {
             )}
           </div>
 
+          {/* Ask Studio Pill Button */}
+          <button
+            type="button"
+            className="studio-pill-action-btn ask-studio-top-btn desktop-only"
+            onClick={() => openAskStudio('')}
+            title="Ask Studio"
+          >
+            <AskSparkleIcon size={16} />
+            <span>Ask Studio</span>
+          </button>
+
           {/* Create Button Dropdown */}
           <div className="dropdown-wrapper">
-            <button className="create-btn" onClick={() => setShowCreateDropdown(!showCreateDropdown)}>
+            <button className="studio-pill-action-btn create-btn" onClick={() => setShowCreateDropdown(!showCreateDropdown)}>
               <span className="material-symbols-outlined">video_call</span>
-              <span>CREATE</span>
+              <span>Create</span>
             </button>
 
             {showCreateDropdown && (
@@ -384,6 +407,7 @@ const TopNav = ({ onToggleSidebar }) => {
       )}
 
       {isUploadModalOpen && <UploadModal onClose={() => setUploadModalOpen(false)} />}
+      <AskStudioDrawer />
     </>
   );
 };
