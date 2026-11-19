@@ -43,10 +43,7 @@ export const TITLE_TO_SCHEDULE_DATE = {
   'Your Soulmate Is Closer Than You Think -Here Are The Signs': '2026-07-28',
   'This Man Loves You So Much... But You\'re Not the Only Woman': '2026-07-21',
   'This Man Truly Loves You But Why Is There Still Another Woman in His Life?': '2026-07-21',
-  'Long AI Video Kaise Banaye (14 Min Video) | AI Video Kaise Banaye | AI Video Maker': '2026-07-16',
-  'Create Kids Cartoon Nursery Rhymes with AI | AI Video Kaise Banaye | AI Video Maker': '2026-07-11',
-  'AI Blogging Course in 2026 using facebook, Instagram Youtube...': '2026-07-06',
-  'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search': '2026-07-01',
+  '5 Hidden Signs Someone Secretly Thinks About You Every Day': '2026-07-01',
   'Make AI Videos Using Notebook LM': '2026-06-26',
   'Raj Shamani Business Idea': '2026-06-21',
   'How to Make AI Influencers For FREE | Lip Sync Dancing AI Influencer...': '2026-06-16',
@@ -177,8 +174,8 @@ export const RAW_VIDEOS = [
   },
   {
     id: 'VID005',
-    title: 'बिना चेहरा दिखाए YouTube Video कैसे बनाए ? New Channel Ideas | YouTube search',
-    description: 'Faceless YouTube channel ideas and automation guide.',
+    title: '5 Hidden Signs Someone Secretly Thinks About You Every Day',
+    description: '5 Hidden Signs Someone Secretly Thinks About You Every Day',
     duration: '10:18',
     durationSecs: 618,
     avgViewDuration: '1:51',
@@ -620,14 +617,14 @@ export function getTrafficSources(totalViews) {
  */
 export function getAudienceBreakdown(totalViews) {
   const geographies = [
-    { country: 'United States', percentage: 38.5, rpm: 48.20, views: Math.round(totalViews * 0.385) },
-    { country: 'Canada', percentage: 11.2, rpm: 42.50, views: Math.round(totalViews * 0.112) },
-    { country: 'United Kingdom', percentage: 9.8, rpm: 39.80, views: Math.round(totalViews * 0.098) },
+    { country: 'United States', percentage: 42.5, rpm: 48.20, views: Math.round(totalViews * 0.425) },
+    { country: 'Canada', percentage: 14.2, rpm: 42.50, views: Math.round(totalViews * 0.142) },
+    { country: 'United Kingdom', percentage: 12.8, rpm: 39.80, views: Math.round(totalViews * 0.128) },
+    { country: 'Australia', percentage: 9.5, rpm: 41.00, views: Math.round(totalViews * 0.095) },
     { country: 'Germany', percentage: 8.4, rpm: 38.10, views: Math.round(totalViews * 0.084) },
-    { country: 'Australia', percentage: 6.5, rpm: 41.00, views: Math.round(totalViews * 0.065) },
-    { country: 'India', percentage: 14.2, rpm: 4.20, views: Math.round(totalViews * 0.142) },
-    { country: 'Philippines', percentage: 4.8, rpm: 5.10, views: Math.round(totalViews * 0.048) },
-    { country: 'Brazil', percentage: 4.0, rpm: 6.50, views: Math.round(totalViews * 0.040) }
+    { country: 'Ireland', percentage: 4.8, rpm: 36.20, views: Math.round(totalViews * 0.048) },
+    { country: 'New Zealand', percentage: 4.2, rpm: 35.10, views: Math.round(totalViews * 0.042) },
+    { country: 'Netherlands', percentage: 3.6, rpm: 34.50, views: Math.round(totalViews * 0.036) }
   ];
 
   const ageGender = [
@@ -641,7 +638,7 @@ export function getAudienceBreakdown(totalViews) {
   const subtitleLanguages = [
     { language: 'English (Original)', percentage: 76.5 },
     { language: 'Spanish', percentage: 8.2 },
-    { language: 'Hindi', percentage: 6.4 },
+    { language: 'French', percentage: 6.4 },
     { language: 'German', percentage: 4.1 },
     { language: 'No subtitles/CC', percentage: 4.8 }
   ];

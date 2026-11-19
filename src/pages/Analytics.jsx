@@ -129,10 +129,17 @@ export default function Analytics() {
         : 0;
 
     return rawDaily.map((d, idx) => {
-      const label = d.label || d.dateLabel || d.shortDate || d.date || `D${idx + 1}`;
+      const rawLabel = d.label || d.dateLabel || d.shortDate || d.date || `D${idx + 1}`;
+      const label = /^\d{4}-\d{2}-\d{2}/.test(String(rawLabel))
+        ? formatPublishDate(rawLabel)
+        : rawLabel;
+      const rawFull = d.fullDate || d.date || rawLabel;
+      const fullDate = /^\d{4}-\d{2}-\d{2}/.test(String(rawFull))
+        ? formatPublishDate(rawFull)
+        : rawFull;
       return {
         label,
-        fullDate: d.fullDate || d.date || label,
+        fullDate,
         value: pickVal(d),
         typical: Math.round(avg * (0.9 + Math.sin(idx * 0.3) * 0.08)),
       };
@@ -196,9 +203,9 @@ export default function Analytics() {
     if (trafficFilterTab === 'external') {
       return [
         { label: 'Google Search', pct: 44.2, display: '44.2%', viewsDisplay: fmtV((agg.views || 0) * 0.022) },
-        { label: 'WhatsApp', pct: 28.4, display: '28.4%', viewsDisplay: fmtV((agg.views || 0) * 0.014) },
-        { label: 'org.telegram.messenger', pct: 16.5, display: '16.5%', viewsDisplay: fmtV((agg.views || 0) * 0.008) },
-        { label: 'ChatGPT / AI Search', pct: 10.9, display: '10.9%', viewsDisplay: fmtV((agg.views || 0) * 0.005) },
+        { label: 'Instagram', pct: 28.4, display: '28.4%', viewsDisplay: fmtV((agg.views || 0) * 0.014) },
+        { label: 'Facebook', pct: 16.5, display: '16.5%', viewsDisplay: fmtV((agg.views || 0) * 0.008) },
+        { label: 'Pinterest', pct: 10.9, display: '10.9%', viewsDisplay: fmtV((agg.views || 0) * 0.005) },
       ];
     }
     if (trafficFilterTab === 'search') {
@@ -230,15 +237,15 @@ export default function Analytics() {
     const base =
       raw.length > 0
         ? raw.slice(0, 5).map((g) => ({
-            label: g.country || g.name || 'India',
+            label: g.country || g.name || 'United States',
             pct: Number(g.percentage ?? g.share ?? 0),
           }))
         : [
-            { label: 'India', pct: 90.3 },
-            { label: 'Pakistan', pct: 2.3 },
-            { label: 'Bangladesh', pct: 1.4 },
-            { label: 'Nepal', pct: 1.2 },
-            { label: 'Saudi Arabia', pct: 0.4 },
+            { label: 'United States', pct: 42.5 },
+            { label: 'Canada', pct: 14.2 },
+            { label: 'United Kingdom', pct: 12.8 },
+            { label: 'Australia', pct: 9.5 },
+            { label: 'Germany', pct: 8.4 },
           ];
     const mult =
       demoGeoTab === 'shorts' ? 0.92 : demoGeoTab === 'live' ? 0.88 : demoGeoTab === 'videos' ? 1.0 : 1.0;
@@ -302,10 +309,10 @@ export default function Analytics() {
     }
     return [
       { label: 'No subtitles/CC', pct: 73.6, display: '73.6%' },
-      { label: 'Hindi', pct: 21.6, display: '21.6%' },
-      { label: 'English', pct: 2.4, display: '2.4%' },
-      { label: 'English (United States)', pct: 0.9, display: '0.9%' },
-      { label: 'Bangla', pct: 0.0, display: '0.0%' },
+      { label: 'English (United States)', pct: 18.4, display: '18.4%' },
+      { label: 'Spanish', pct: 4.2, display: '4.2%' },
+      { label: 'French', pct: 2.4, display: '2.4%' },
+      { label: 'German', pct: 1.4, display: '1.4%' },
     ];
   }, [snapshot?.audience?.subtitleLanguages]);
 
@@ -408,13 +415,29 @@ export default function Analytics() {
       ? [
           { key: 'last7', label: '7 days' },
           { key: 'last28', label: '28 days' },
-          { key: 'lifetime', label: 'Since published' },
+          { key: 'lifetime', label: 'Since uploaded' },
         ]
       : [
           { key: 'last7', label: '7 days' },
           { key: 'last28', label: '28 days' },
           { key: 'last90', label: '90 days' },
         ];
+
+    const isMoreActive =
+      rangeKey === 'last365' ||
+      rangeKey === '365' ||
+      rangeKey === '2026' ||
+      rangeKey === '2025' ||
+      (!isVideoMode && rangeKey === 'lifetime');
+
+    const moreBtnLabel =
+      rangeKey === 'last365' || rangeKey === '365'
+        ? '365 days'
+        : !isVideoMode && rangeKey === 'lifetime'
+        ? 'Lifetime'
+        : rangeKey === '2026' || rangeKey === '2025'
+        ? rangeKey
+        : 'More';
 
     return (
       <div className="an26-date-controls">
@@ -432,12 +455,10 @@ export default function Analytics() {
         <div className="an26-more-wrap">
           <button
             type="button"
-            className={`an26-pill-filter ${
-              rangeKey === 'last365' || (!isVideoMode && rangeKey === 'lifetime') ? 'active' : ''
-            }`}
+            className={`an26-pill-filter ${isMoreActive ? 'active' : ''}`}
             onClick={() => setShowMorePeriods((m) => !m)}
           >
-            <span>More</span>
+            <span>{moreBtnLabel}</span>
             <span className="material-symbols-outlined">expand_more</span>
           </button>
 
@@ -448,6 +469,9 @@ export default function Analytics() {
               </button>
               <button type="button" onClick={() => handleSelectDateRange('lifetime')}>
                 Lifetime
+              </button>
+              <button type="button" onClick={() => handleSelectDateRange('2026')}>
+                2026
               </button>
               <button
                 type="button"
@@ -923,9 +947,9 @@ export default function Analytics() {
             </div>
             <StudioProgressList
               items={[
-                { label: 'Google Search', pct: 33.3, display: '33.3%' },
-                { label: 'WhatsApp', pct: 33.3, display: '33.3%' },
-                { label: 'org.telegram.messenger', pct: 33.3, display: '33.3%' },
+                { label: 'Google Search', pct: 42.6, display: '42.6%' },
+                { label: 'Instagram', pct: 31.8, display: '31.8%' },
+                { label: 'Facebook', pct: 25.6, display: '25.6%' },
               ]}
             />
           </div>
@@ -1230,10 +1254,10 @@ export default function Analytics() {
       });
 
     const otherChannelsList = [
-      { name: 'AI Automation Hindi', subs: '46.4K subscribers', initials: 'AA', bg: '#4747eb' },
-      { name: 'Creator Growth Lab', subs: '1.4L subscribers', initials: 'CG', bg: '#8b2fc9' },
-      { name: 'Faceless YouTube Hub', subs: '2.0L subscribers', initials: 'FY', bg: '#065fd4' },
-      { name: 'Future Tech India', subs: '5.0L subscribers', initials: 'FT', bg: '#137333' },
+      { name: 'Mindful Soul Insights', subs: '46.4K subscribers', initials: 'MS', bg: '#4747eb' },
+      { name: 'Modern Relationship Lab', subs: '140K subscribers', initials: 'MR', bg: '#8b2fc9' },
+      { name: 'Deep Connection Daily', subs: '210K subscribers', initials: 'DC', bg: '#065fd4' },
+      { name: 'Inner Clarity Studio', subs: '500K subscribers', initials: 'IC', bg: '#137333' },
     ];
 
     const otherWatchedVideos = [...videos]
@@ -1458,7 +1482,7 @@ export default function Analytics() {
                 <div className="an26-card-head">
                   <div>
                     <h3>When your viewers are on YouTube</h3>
-                    <span className="an26-card-sub">Your local time (GMT+05:30) · Last 28 days</span>
+                    <span className="an26-card-sub">Your local time (GMT-05:00) · Last 28 days</span>
                   </div>
                 </div>
                 <AudienceHeatmapGrid matrix={snapshot?.audience?.viewerHeatmap} />
@@ -2342,19 +2366,15 @@ export default function Analytics() {
 
       {/* AI Summary Banner (Channel Overview only) */}
       {!isVideoMode && (() => {
-        const topSummaryVid = [...videos].sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0] || videos[0];
+        const topPanelVid = videos[0] || null;
         const totalViewsNum = Number(agg.views || 0);
-        const sharePct =
-          topSummaryVid && totalViewsNum > 0
-            ? Math.min(89, Math.max(12, Math.round((Number(topSummaryVid.views || 0) / totalViewsNum) * 100)))
-            : 44;
 
         return (
           <div className="an26-ai-section">
             <div className="an26-ai-banner">
               <div className="an26-ai-left">
                 <h3>
-                  Views and watch time remain steady, led by your latest upload.
+                  Views and watch time are above typical, driven by your top channel video.
                 </h3>
                 <button
                   type="button"
@@ -2367,21 +2387,24 @@ export default function Analytics() {
               </div>
               <div className="an26-ai-right">
                 <p>
-                  Your core engagement remains strong.{' '}
-                  {topSummaryVid && (
+                  Your channel earned {agg.viewsFormatted || fmtV(totalViewsNum)} views and{' '}
+                  {formatHoursValue(agg.watchTimeHrs || 0)} watch hours across{' '}
+                  {snapshot?.dateRangeLabel}, remaining well above typical benchmarks.{' '}
+                  {topPanelVid && (
                     <button
                       type="button"
                       className="an26-ai-vid-link"
-                      onClick={() => navigate(`${CHANNEL_PREFIX}/video/${topSummaryVid.id}/analytics/hub_overview`)}
+                      onClick={() => navigate(`${CHANNEL_PREFIX}/video/${topPanelVid.id}/analytics/hub_overview`)}
                     >
-                      {topSummaryVid.title}
+                      {topPanelVid.title}
                     </button>
                   )}{' '}
-                  powered over {sharePct}% of your {formatCountComma(totalViewsNum)} views across{' '}
-                  {snapshot?.dateRangeLabel}. Viewers stayed engaged across your top uploads with{' '}
-                  {formatHoursValue(agg.watchTimeHrs || 0)} watch hours logged. Your audience responds
-                  strongly to clear structure, strong hooks, and practical takeaways that sustain
-                  viewer retention.
+                  led audience engagement with{' '}
+                  {topPanelVid?.viewsFormatted || fmtV(topPanelVid?.views || 0)} views and a{' '}
+                  {topPanelVid?.avgViewDuration || topPanelVid?.avgDuration || '12:51'} average view
+                  duration, powered primarily by Browse features and new viewers. Consistent
+                  storytelling hooks and strong emotional pacing will keep deepening viewer
+                  retention.
                 </p>
                 <div className="an26-ai-meta">
                   <span>Generated by AI · AI can make mistakes, so double-check it</span>

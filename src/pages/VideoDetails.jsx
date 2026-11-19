@@ -282,7 +282,7 @@ export default function VideoDetails() {
                   <td>Original audio</td>
                 </tr>
                 <tr>
-                  <td>Hindi</td>
+                  <td>Spanish</td>
                   <td>Not added</td>
                   <td>Add subtitles</td>
                   <td>—</td>

@@ -198,11 +198,11 @@ export const InsforgeService = {
     try {
       const payload = {
         channel_id: channelInfo.id || 'UCqpdVWIzEQUcbf4pAxlneOQ',
-        name: channelInfo.name || 'Talk Money With Pavan',
-        handle: channelInfo.handle || '@talkmoneywithpavan',
+        name: channelInfo.name || 'Soul Signs',
+        handle: channelInfo.handle || '@soulsigns',
         avatar: channelInfo.avatar,
         banner: channelInfo.banner,
-        country: channelInfo.country || 'IN',
+        country: channelInfo.country || 'United States',
         subscribers: Number(channelInfo.subscribers) || 0,
         subscribers_formatted: channelInfo.subscribersFormatted || `${channelInfo.subscribers}`,
         subscribers_gained_last_28_days: Number(channelInfo.subscribersGainedLast28Days) || 0,

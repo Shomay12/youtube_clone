@@ -65,7 +65,7 @@ export function StudioLineMetricChart({
     <div className="an26-line-chart-outer">
       <div className="an26-line-chart-wrap" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 2 }}>
+          <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 2 }}>
             <defs>
               <pattern
                 id="studioHatch"
@@ -82,6 +82,7 @@ export function StudioLineMetricChart({
               dataKey="label"
               axisLine={{ stroke: '#d8d8d8' }}
               tickLine={false}
+              padding={{ left: 14, right: 14 }}
               ticks={firstLabel && lastLabel && firstLabel !== lastLabel ? [firstLabel, lastLabel] : undefined}
               tick={{ fontSize: 10.5, fill: '#909090' }}
               interval="preserveStartEnd"

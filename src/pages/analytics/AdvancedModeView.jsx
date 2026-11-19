@@ -74,10 +74,10 @@ export default function AdvancedModeView({
       });
     } else if (dimension === 'geography') {
       const geos = audience?.geographies || [
-        { country: 'India', percentage: 48 },
-        { country: 'United States', percentage: 21 },
-        { country: 'United Kingdom', percentage: 9 },
-        { country: 'Canada', percentage: 6 },
+        { country: 'United States', percentage: 48 },
+        { country: 'United Kingdom', percentage: 21 },
+        { country: 'Canada', percentage: 15 },
+        { country: 'Australia', percentage: 10 },
       ];
       list = geos.map((g, i) => {
         const share = Number(g.percentage ?? g.share ?? 15) / 100;
