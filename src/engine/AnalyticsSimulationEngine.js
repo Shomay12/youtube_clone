@@ -13,7 +13,7 @@
 export const CHANNEL_BENCHMARKS = {
   name: 'Soul Signs',
   handle: '@kidstoon',
-  subscribers: 146589,
+  subscribers: 148642,
   lifetimeViews: 21450000,
   averageRpm: 33.64,
   averageCpm: 58.00,
@@ -74,27 +74,27 @@ export const RAW_VIDEOS = [
     durationSecs: 1500,
     avgViewDuration: '12:51',
     avgViewDurationSecs: 771,
-    views: 253676,
+    views: 251704,
     ctr: 8.9,
-    rpm: 427.3871,
+    rpm: 427.3866,
     cpm: 58.65,
     publishDate: '2026-08-07',
     thumbnail: '/thumbnails/soulmate_enter_life.png',
     category: 'Entertainment',
-    watchTimeHrs: 54300,
-    revenue: 108417.84,
-    revenueFormatted: '₹1,08,417.84',
-    watchTimeHrsFormatted: '54.30K hrs',
-    subscribersGained: 3924,
+    watchTimeHrs: 53870,
+    revenue: 107574.92,
+    revenueFormatted: '₹1,07,574.92',
+    watchTimeHrsFormatted: '53.87K hrs',
+    subscribersGained: 4014,
     subscribersLost: 0,
-    netSubscribers: 3924,
-    subscribersNet: 3924,
-    viewsFormatted: '253.7K',
-    subscribersNetFormatted: '+3.9K',
-    subscribersGainedFormatted: '+3.9K',
-    realtimeViews48h: 342,
+    netSubscribers: 4014,
+    subscribersNet: 4014,
+    viewsFormatted: '251.7K',
+    subscribersNetFormatted: '+4.0K',
+    subscribersGainedFormatted: '+4.0K',
+    realtimeViews48h: 274,
     realtimeViews60m: 18,
-    topContentViews: 342,
+    topContentViews: 274,
     realtimeTrafficSources: {
       browse: 55,
       search: 18,
@@ -507,7 +507,7 @@ export function generateDailyTimeSeries(daysCount = 365, anchorDate = '2026-09-1
   return dailyData;
 }
 
-export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-11-13');
+export const DAILY_SERIES = generateDailyTimeSeries(365, '2026-11-20');
 
 /**
  * Filter daily metrics based on date range boundaries

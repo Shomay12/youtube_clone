@@ -114,13 +114,17 @@ export default function Dashboard() {
   const topRealtimeVideos = useMemo(() => {
     const rtList = realtimeDataset?.videos || [];
     if (rtList.length > 0) return rtList.slice(0, 3);
-    return [...(videos || [])]
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
+    return (videos || [])
       .slice(0, 3)
       .map((v) => ({
         id: v.id,
         title: v.title,
-        views48h: Math.max(12, Math.round((v.views || 500) * 0.08)),
+        views48h:
+          v.topContentViews !== undefined && v.topContentViews !== null
+            ? Number(v.topContentViews)
+            : v.realtimeViews48h !== undefined && v.realtimeViews48h !== null
+              ? Number(v.realtimeViews48h)
+              : Math.max(12, Math.round((v.views || 500) * 0.08)),
       }));
   }, [realtimeDataset, videos]);
 

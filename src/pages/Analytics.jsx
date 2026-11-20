@@ -333,15 +333,20 @@ export default function Analytics() {
   );
 
   const rtTotal48h = useMemo(() => {
-    if (realtimeDataset?.total48h) {
-      return isVideoMode
-        ? Math.max(18, Math.round((currentVideo?.views || 500) * 0.045))
-        : realtimeDataset.total48h;
+    if (isVideoMode) {
+      if (currentVideo?.realtimeViews48h !== undefined && currentVideo?.realtimeViews48h !== null) {
+        return Number(currentVideo.realtimeViews48h);
+      }
+      return Math.max(18, Math.round((currentVideo?.views || 500) * 0.045));
     }
-    return isVideoMode
-      ? Math.max(18, Math.round((currentVideo?.views || 500) * 0.045))
-      : Math.max(120, Math.round((agg.views || 1200) * 0.065));
-  }, [realtimeDataset?.total48h, isVideoMode, currentVideo?.views, agg.views]);
+    if (channelInfo?.realtimeViews48h !== undefined && channelInfo?.realtimeViews48h !== null) {
+      return Number(channelInfo.realtimeViews48h);
+    }
+    if (realtimeDataset?.total48h) {
+      return realtimeDataset.total48h;
+    }
+    return Math.max(120, Math.round((agg.views || 1200) * 0.065));
+  }, [isVideoMode, currentVideo?.realtimeViews48h, currentVideo?.views, channelInfo?.realtimeViews48h, realtimeDataset?.total48h, agg.views]);
 
   const rtTopVideos = useMemo(() => {
     const list = realtimeDataset?.videos || [];
@@ -358,7 +363,12 @@ export default function Analytics() {
       id: v.id,
       title: v.title,
       thumbnail: v.thumbnail || '/thumbnails/latest_video.png',
-      views48h: Math.max(12, Math.round((v.views || 400) * 0.05)),
+      views48h:
+        v.topContentViews !== undefined && v.topContentViews !== null
+          ? Number(v.topContentViews)
+          : v.realtimeViews48h !== undefined && v.realtimeViews48h !== null
+            ? Number(v.realtimeViews48h)
+            : Math.max(12, Math.round((v.views || 400) * 0.05)),
     }));
   }, [realtimeDataset?.videos, videos]);
 

@@ -371,9 +371,9 @@ export default function CRM() {
 
   // Date Range Draft State
   const [dateDraft, setDateDraft] = useState({
-    anchorDate: simulationAnchorDate || '2026-11-13',
-    startDate: customStartDate || '2026-10-17',
-    endDate: customEndDate || '2026-11-13',
+    anchorDate: simulationAnchorDate || '2026-11-20',
+    startDate: customStartDate || '2026-10-24',
+    endDate: customEndDate || '2026-11-20',
     preset: selectedDateRange || 'last28'
   });
 
@@ -2011,14 +2011,14 @@ export default function CRM() {
                 className="crm-btn crm-btn-cancel"
                 onClick={() => {
                   setDateDraft({
-                    anchorDate: '2026-11-13',
-                    startDate: '2026-10-17',
-                    endDate: '2026-11-13',
+                    anchorDate: '2026-11-20',
+                    startDate: '2026-10-24',
+                    endDate: '2026-11-20',
                     preset: 'last28'
                   });
                 }}
               >
-                🔄 Reset to Oct 17 – Nov 13, 2026
+                🔄 Reset to Oct 24 – Nov 20, 2026
               </button>
             </div>
           </div>
